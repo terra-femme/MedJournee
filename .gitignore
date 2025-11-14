@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+venv/
+env/
+
+# Environment variables (never commit these!)
+.env
+.env.local
+secrets.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific
+data/
+logs/
+*.db
+*.sqlite3
+node_modules/
+
+# ML/Data
+*.pkl
+*.joblib
+*.h5
