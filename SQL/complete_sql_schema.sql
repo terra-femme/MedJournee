@@ -1,7 +1,3 @@
--- Medical Journal Database Schema for Google Cloud SQL (MySQL)
--- Database: mjournee
--- Run this in your Google Cloud SQL console
-
 -- 1. Live Sessions Table
 -- Tracks all medical visit sessions (active and completed)
 CREATE TABLE IF NOT EXISTS live_sessions (
