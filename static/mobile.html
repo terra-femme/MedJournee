@@ -20,10 +20,9 @@
             overflow-x: hidden;
             max-width: 428px;
             margin: 0 auto;
-            height: 100vh;
+            min-height: 100vh;
         }
 
-        /* Header */
         .header {
             background: white;
             padding: 15px;
@@ -63,7 +62,6 @@
             padding: 8px;
         }
 
-        /* Navigation Drawer */
         .nav-drawer {
             position: fixed;
             top: 0;
@@ -148,7 +146,6 @@
             font-size: 18px;
         }
 
-        /* Overlay */
         .overlay {
             position: fixed;
             top: 0;
@@ -164,7 +161,6 @@
             display: block;
         }
 
-        /* Main Content */
         .main-content {
             padding: 20px 16px;
             padding-bottom: 100px;
@@ -198,7 +194,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Entry Card */
         .entry-card {
             background: white;
             border-radius: 16px;
@@ -259,25 +254,12 @@
             color: #666;
             line-height: 1.5;
             display: -webkit-box;
-            /* The following properties are for truncating text after 2 lines in WebKit browsers */
             -webkit-line-clamp: 2;
-            line-clamp: 2; /* Standard property for compatibility */
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-        .entry-summary {
-            font-size: 14px;
-            color: #666;
-            line-height: 1.5;
-            display: -webkit-box;
-            /* The following properties are for truncating text after 2 lines in WebKit browsers */
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            line-clamp: 2; /* Standard property for compatibility */
-            box-orient: vertical;
-        }
-        /* Floating Action Buttons */
+
         .fab-container {
             position: fixed;
             bottom: 24px;
@@ -334,7 +316,47 @@
             opacity: 0.3;
         }
 
-        /* Mobile optimizations */
+        .medical-term {
+            background: linear-gradient(120deg, #a8e6cf 0%, #dcedc1 100%);
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            border-bottom: 2px dotted #48bb78;
+        }
+
+        .medical-term:hover {
+            background: linear-gradient(120deg, #81c784 0%, #aed581 100%);
+        }
+
+        .term-popup {
+            background: white;
+            border: 2px solid #48bb78;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            max-width: 300px;
+            z-index: 9999;
+            position: fixed;
+        }
+
+        .popup-header {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .popup-simple {
+            font-size: 1.1em;
+            color: #48bb78;
+            margin-bottom: 8px;
+        }
+
+        .popup-explanation {
+            color: #4a5568;
+            line-height: 1.5;
+        }
+
         @media (max-width: 428px) {
             body {
                 max-width: 100%;
@@ -343,24 +365,21 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <button class="menu-btn" onclick="toggleDrawer()">☰</button>
         <div class="header-title">MedJournee</div>
         <div class="header-icons">
             <button class="icon-btn" onclick="toggleSort()">🔃</button>
-            <button class="icon-btn" onclick="alert('Search feature')">🔍</button>
+            <button class="icon-btn" onclick="alert('Search coming soon')">🔍</button>
         </div>
     </div>
 
-    <!-- Navigation Drawer -->
     <div class="nav-drawer" id="navDrawer">
         <div class="nav-header">
             <h2>MedJournee</h2>
             <button class="close-btn" onclick="toggleDrawer()">✕</button>
         </div>
 
-        <!-- Entries Section -->
         <div class="nav-section">
             <div class="nav-section-title">Entries</div>
             <div class="nav-item" onclick="filterEntries('visits')">
@@ -370,82 +389,32 @@
                 </div>
                 <span class="nav-arrow">›</span>
             </div>
-            <div class="nav-item" onclick="alert('Imaging')">
+            <div class="nav-item" onclick="alert('Coming soon')">
                 <div class="nav-item-content">
                     <span class="nav-icon">📸</span>
                     <span class="nav-label">Imaging</span>
                 </div>
                 <span class="nav-arrow">›</span>
             </div>
-            <div class="nav-item" onclick="alert('Labs')">
+            <div class="nav-item" onclick="alert('Coming soon')">
                 <div class="nav-item-content">
                     <span class="nav-icon">🧪</span>
                     <span class="nav-label">Labs</span>
                 </div>
                 <span class="nav-arrow">›</span>
             </div>
-            <div class="nav-item" onclick="alert('Surgeries/Biopsies')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">🏥</span>
-                    <span class="nav-label">Surgeries/Biopsies</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Therapy')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">💭</span>
-                    <span class="nav-label">Therapy</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Other')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">⭐</span>
-                    <span class="nav-label">Other</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
         </div>
 
-        <!-- Tools Section -->
         <div class="nav-section" style="border-top: 1px solid #e0e0e0;">
             <div class="nav-section-title">Tools</div>
-            <div class="nav-item" onclick="alert('Entry Lock')">
+            <div class="nav-item" onclick="window.location.href='/static/record.html'">
                 <div class="nav-item-content">
-                    <span class="nav-icon">🔒</span>
-                    <span class="nav-label">Entry Lock</span>
+                    <span class="nav-icon">🎙️</span>
+                    <span class="nav-label">New Recording</span>
                 </div>
                 <span class="nav-arrow">›</span>
             </div>
-            <div class="nav-item" onclick="alert('Sync')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">☁️</span>
-                    <span class="nav-label">iCloud/Android Sync</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Export/Import')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">⬆️</span>
-                    <span class="nav-label">Export/Import</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="window.open('https://support.medjournee.com', '_blank')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">❔</span>
-                    <span class="nav-label">Help Center</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Share')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">❤️</span>
-                    <span class="nav-label">Share</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Settings')">
+            <div class="nav-item" onclick="alert('Settings coming soon')">
                 <div class="nav-item-content">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-label">Settings</span>
@@ -455,10 +424,8 @@
         </div>
     </div>
 
-    <!-- Overlay -->
     <div class="overlay" id="overlay" onclick="toggleDrawer()"></div>
 
-    <!-- Main Content -->
     <div class="main-content">
         <div class="year-header">2025</div>
         
@@ -472,22 +439,20 @@
         <div id="emptyState" class="empty-state" style="display: none;">
             <div class="empty-icon">📋</div>
             <h3>No Journal Entries Yet</h3>
-            <p style="margin-top: 12px;">Tap the + button below to start your first medical visit</p>
+            <p style="margin-top: 12px;">Tap the + button below to start your first medical visit recording</p>
         </div>
     </div>
 
-    <!-- Floating Action Buttons -->
     <div class="fab-container">
-        <button class="fab fab-secondary" onclick="alert('Calendar view')">📅</button>
+        <button class="fab fab-secondary" onclick="alert('Calendar coming soon')">📅</button>
         <button class="fab fab-primary" onclick="startNewEntry()">+</button>
-        <button class="fab fab-secondary" onclick="alert('Profile')">👤</button>
+        <button class="fab fab-secondary" onclick="alert('Profile coming soon')">👤</button>
     </div>
 
     <script>
         const API_BASE = 'http://localhost:8000';
-        const USER_ID = 'user-001'; // This would come from login in real app
+        const USER_ID = 'user-001';
 
-        // Navigation Drawer
         function toggleDrawer() {
             const drawer = document.getElementById('navDrawer');
             const overlay = document.getElementById('overlay');
@@ -504,7 +469,6 @@
             toggleDrawer();
         }
 
-        // Load journal entries from your FastAPI backend
         async function loadJournalEntries() {
             try {
                 const response = await fetch(`${API_BASE}/live-session/list-journal-entries/${USER_ID}`);
@@ -560,26 +524,15 @@
         }
 
         function openFullEntry(sessionId) {
-            // Navigate to full entry view (we'll build this next)
-            alert(`Opening full entry for session: ${sessionId}\n\nThis will show the detailed view with all medical information.`);
-            
-            // In real app, this would navigate to full entry page
-            // window.location.href = `entry.html?session=${sessionId}`;
+            window.location.href = `/static/entry.html?session=${sessionId}`;
         }
 
         function startNewEntry() {
-            if (confirm('Start a new medical visit recording?\n\nThis will open the live translation interface.')) {
-                // Navigate to recording interface
-                alert('Opening live translation interface...\n\nThis would connect to your enhanced-live-diarize endpoint.');
-                
-                // In real app: window.location.href = 'record.html';
-            }
+            window.location.href = '/static/record.html';
         }
 
-        // Load entries when page loads
         window.addEventListener('load', loadJournalEntries);
 
-        // Prevent pull-to-refresh on mobile
         document.body.addEventListener('touchmove', function(e) {
             if (e.target.closest('.main-content')) {
                 return;

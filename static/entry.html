@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MedJournee - Journal Entry</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            max-width: 428px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 20px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .header-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .edit-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2196F3;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .entry-content {
+            padding: 15px;
+        }
+
+        .date-badge {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .date-day {
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .date-month {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2196F3;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-content {
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .section-content.editable {
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 8px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .edit-mode .section-content.editable {
+            border-color: #2196F3;
+            background: #f8f9fa;
+        }
+
+        .section-content[contenteditable="true"]:focus {
+            outline: none;
+            border-color: #1976D2;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .list-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-bullet {
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        .medication-card {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .medication-name {
+            font-weight: 600;
+            color: #1976D2;
+            margin-bottom: 4px;
+        }
+
+        .medication-details {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .family-summary {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .family-summary .section-title {
+            color: #388E3C;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            min-height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .notes-section textarea:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .save-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .save-indicator.show {
+            opacity: 1;
+        }
+
+        .medical-term {
+            background: linear-gradient(120deg, #fff3e0 0%, #ffe0b2 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            border-bottom: 2px dotted #ff9800;
+        }
+
+        .term-explanation {
+            background: white;
+            border: 2px solid #ff9800;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .term-simple {
+            font-weight: 600;
+            color: #e65100;
+            margin-bottom: 5px;
+        }
+
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 428px;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-bar button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-share {
+            background: #e3f2fd;
+            color: #1976D2;
+        }
+
+        .btn-delete {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .content-wrapper {
+            padding-bottom: 80px;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <div class="header-title">Journal Entry</div>
+        <button class="edit-btn" id="editBtn" onclick="toggleEditMode()">Edit</button>
+    </div>
+
+    <div id="loadingState" class="loading">
+        <div class="spinner"></div>
+        <p>Loading journal entry...</p>
+    </div>
+
+    <div id="errorState" class="error-state" style="display: none;">
+        <div style="font-size: 48px; margin-bottom: 20px;">📋</div>
+        <h3>Entry Not Found</h3>
+        <p style="margin-top: 10px;">This journal entry could not be loaded.</p>
+        <button onclick="goBack()" style="margin-top: 20px; padding: 12px 24px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer;">Go Back</button>
+    </div>
+
+    <div id="entryContent" class="content-wrapper" style="display: none;">
+        <!-- Content will be dynamically inserted -->
+    </div>
+
+    <div class="action-bar" id="actionBar" style="display: none;">
+        <button class="btn-share" onclick="shareEntry()">📤 Share</button>
+        <button class="btn-delete" onclick="deleteEntry()">🗑️ Delete</button>
+    </div>
+
+    <div class="save-indicator" id="saveIndicator">✓ Saved</div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let sessionId = null;
+        let entryData = null;
+        let isEditMode = false;
+        let autoSaveTimeout = null;
+
+        // Get session ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        sessionId = urlParams.get('session');
+
+        if (!sessionId) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+        } else {
+            loadEntry();
+        }
+
+        function goBack() {
+            window.location.href = '/';
+        }
+
+        async function loadEntry() {
+            try {
+                const response = await fetch(`${API_BASE}/live-session/get-journal/${sessionId}`);
+                const result = await response.json();
+
+                document.getElementById('loadingState').style.display = 'none';
+
+                if (result.success && result.journal_entry) {
+                    entryData = result.journal_entry;
+                    renderEntry(entryData);
+                    document.getElementById('entryContent').style.display = 'block';
+                    document.getElementById('actionBar').style.display = 'flex';
+                } else {
+                    document.getElementById('errorState').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Load error:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('errorState').style.display = 'block';
+            }
+        }
+
+        function renderEntry(entry) {
+            const date = new Date(entry.visit_date);
+            const day = date.getDate();
+            const month = date.toLocaleString('en', { month: 'long', year: 'numeric' });
+
+            let html = `
+                <div class="entry-content">
+                    <div class="date-badge">
+                        <div class="date-day">${day}</div>
+                        <div class="date-month">${month}</div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">📋 Visit Information</div>
+                        <div class="section-content">
+                            <div class="info-row">
+                                <span class="info-label">Visit Type</span>
+                                <span class="info-value" data-field="visit_type">${entry.visit_type || 'Medical Visit'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Provider</span>
+                                <span class="info-value" data-field="provider_name">${entry.provider_name || 'Healthcare Provider'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Patient</span>
+                                <span class="info-value" data-field="patient_name">${entry.patient_name || 'Patient'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Main Reason</span>
+                                <span class="info-value" data-field="main_reason">${entry.main_reason || 'Medical consultation'}</span>
+                            </div>
+                        </div>
+                    </div>
+            `;
+
+            // Symptoms
+            if (entry.symptoms && entry.symptoms.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">🤒 Symptoms Discussed</div>
+                        <div class="section-content" data-field="symptoms">
+                            ${formatList(entry.symptoms)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Diagnoses
+            if (entry.diagnoses && entry.diagnoses.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">🔍 Diagnoses</div>
+                        <div class="section-content" data-field="diagnoses">
+                            ${formatList(entry.diagnoses)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Treatments
+            if (entry.treatments && entry.treatments.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">💊 Treatments</div>
+                        <div class="section-content" data-field="treatments">
+                            ${formatList(entry.treatments)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Medications
+            if (entry.medications && entry.medications.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">💊 Medications</div>
+                        <div class="section-content">
+                            ${formatMedications(entry.medications)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Follow-up Instructions
+            if (entry.follow_up_instructions && entry.follow_up_instructions.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">📝 Follow-up Instructions</div>
+                        <div class="section-content" data-field="follow_up_instructions">
+                            ${formatList(entry.follow_up_instructions)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Family Summary
+            if (entry.family_summary) {
+                html += `
+                    <div class="family-summary">
+                        <div class="section-title">👨‍👩‍👧 Family Summary</div>
+                        <div class="section-content editable" data-field="family_summary">
+                            ${entry.family_summary}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Medical Terms Explained
+            if (entry.medical_terms_explained && Object.keys(entry.medical_terms_explained).length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">📖 Medical Terms Explained</div>
+                        <div class="section-content">
+                            ${formatMedicalTerms(entry.medical_terms_explained)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Personal Notes
+            html += `
+                <div class="section notes-section">
+                    <div class="section-title">✏️ Personal Notes</div>
+                    <textarea id="personalNotes" placeholder="Add your own notes here..." oninput="autoSaveNotes()">${entry.personal_notes || ''}</textarea>
+                </div>
+            `;
+
+            html += `</div>`;
+
+            document.getElementById('entryContent').innerHTML = html;
+        }
+
+        function formatList(items) {
+            if (!items || items.length === 0) return '<p>None recorded</p>';
+            
+            if (typeof items === 'string') {
+                items = items.split('\n').filter(i => i.trim());
+            }
+            
+            return items.map(item => `
+                <div class="list-item">
+                    <span class="list-bullet">•</span>
+                    <span>${item}</span>
+                </div>
+            `).join('');
+        }
+
+        function formatMedications(meds) {
+            if (!meds || meds.length === 0) return '<p>None prescribed</p>';
+            
+            return meds.map(med => {
+                if (typeof med === 'string') {
+                    return `<div class="medication-card"><div class="medication-name">${med}</div></div>`;
+                }
+                return `
+                    <div class="medication-card">
+                        <div class="medication-name">${med.name || 'Medication'}</div>
+                        <div class="medication-details">
+                            ${med.dosage ? `Dosage: ${med.dosage}` : ''}
+                            ${med.frequency ? ` | ${med.frequency}` : ''}
+                            ${med.duration ? ` | ${med.duration}` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatMedicalTerms(terms) {
+            return Object.entries(terms).map(([term, explanation]) => {
+                const simple = typeof explanation === 'object' ? explanation.simple : explanation;
+                const detail = typeof explanation === 'object' ? explanation.explanation : '';
+                return `
+                    <div class="term-explanation">
+                        <div style="font-weight: 600; color: #333;">${term}</div>
+                        <div class="term-simple">= ${simple}</div>
+                        ${detail ? `<div style="color: #666; font-size: 13px; margin-top: 5px;">${detail}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const editBtn = document.getElementById('editBtn');
+            const editableFields = document.querySelectorAll('.editable');
+            
+            if (isEditMode) {
+                editBtn.textContent = 'Done';
+                editBtn.style.background = '#4CAF50';
+                document.body.classList.add('edit-mode');
+                editableFields.forEach(field => {
+                    field.contentEditable = 'true';
+                });
+            } else {
+                editBtn.textContent = 'Edit';
+                editBtn.style.background = 'rgba(255,255,255,0.2)';
+                document.body.classList.remove('edit-mode');
+                editableFields.forEach(field => {
+                    field.contentEditable = 'false';
+                });
+                saveAllChanges();
+            }
+        }
+
+        function autoSaveNotes() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(async () => {
+                const notes = document.getElementById('personalNotes').value;
+                try {
+                    await fetch(`${API_BASE}/live-session/update-journal-notes/${sessionId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ personal_notes: notes })
+                    });
+                    showSaveIndicator();
+                } catch (error) {
+                    console.error('Auto-save error:', error);
+                }
+            }, 2000);
+        }
+
+        async function saveAllChanges() {
+            const updates = {};
+            
+            // Collect editable field values
+            document.querySelectorAll('[data-field]').forEach(el => {
+                const field = el.dataset.field;
+                updates[field] = el.textContent.trim();
+            });
+
+            try {
+                await fetch(`${API_BASE}/live-session/update-journal/${sessionId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                showSaveIndicator();
+            } catch (error) {
+                console.error('Save error:', error);
+            }
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 2000);
+        }
+
+        function shareEntry() {
+            if (navigator.share) {
+                navigator.share({
+                    title: `Medical Visit - ${entryData.visit_date}`,
+                    text: entryData.family_summary || 'Medical visit journal entry'
+                });
+            } else {
+                // Fallback: copy to clipboard
+                const summary = entryData.family_summary || entryData.visit_summary || 'Medical visit';
+                navigator.clipboard.writeText(summary);
+                alert('Summary copied to clipboard!');
+            }
+        }
+
+        function deleteEntry() {
+            if (confirm('Are you sure you want to delete this journal entry? This cannot be undone.')) {
+                alert('Delete functionality would be implemented here');
+                // In production: call DELETE endpoint then redirect
+            }
+        }
+    </script>
+</body>
+</html>

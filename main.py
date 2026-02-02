@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from routes import transcribe, translate, tts, journal, combined_translation, live_translation
+from routes import realtime_routes  # NEW: Hybrid real-time transcription
 from fastapi.responses import FileResponse
 import os
 
@@ -33,9 +34,9 @@ app.include_router(translate.router, prefix="/translate")
 app.include_router(journal.router, prefix="/journal")
 app.include_router(combined_translation.router, prefix="/combined")
 app.include_router(live_translation.router, prefix="/live-session")
+app.include_router(realtime_routes.router, prefix="/realtime")  # NEW
 
 @app.get("/")
 async def serve_html():
-    html_path = os.path.join("static", "mobile.html") # this controls your homepage
+    html_path = os.path.join("static", "mobile.html")
     return FileResponse(html_path)
-
