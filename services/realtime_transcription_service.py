@@ -22,6 +22,8 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import asyncio
 from dotenv import load_dotenv
+import numpy as np
+import librosa
 
 load_dotenv()
 
@@ -30,12 +32,19 @@ class RealtimeTranscriptionService:
     Provides instant transcription during recording,
     then enhances with speaker diarization after recording stops.
     """
-    
+
     def __init__(self):
         self.openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
+
         # Session storage for pending diarization
         self.pending_sessions = {}
+
+        # Track speaker assignments by session
+        self.session_speakers = {}
+
+        # Speaker assignment thresholds
+        self.speaker_similarity_threshold = 0.75
+        self.confidence_threshold = 0.80
     
     async def transcribe_chunk_instant(
         self, 
@@ -186,44 +195,60 @@ class RealtimeTranscriptionService:
         self,
         audio_file,
         target_language: str = "vi",
-        source_language: Optional[str] = None
+        source_language: Optional[str] = None,
+        session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Fast transcription + translation for real-time display.
-        No speaker detection - that comes later.
+        When session_id is provided, attempts to identify speaker.
         """
         from services.translation_service import translate_text
-        
-        # Step 1: Fast transcription
+
+        # Step 1: Get speaker ID if session tracking is active
+        if session_id and session_id in self.session_speakers:
+            speaker_info = await self.identify_current_speaker(audio_file, session_id)
+        else:
+            # Default behavior without speaker tracking
+            speaker_info = {
+                "speaker_id": "SPEAKER_1",
+                "speaker_role": "Healthcare Provider",
+                "speaker_name": "Unknown",
+                "confidence": 0.5,
+                "is_enrolled": False
+            }
+
+        # Step 2: Fast transcription
         transcription_result = await self.transcribe_chunk_instant(audio_file, source_language)
-        
+
         if not transcription_result["success"] or transcription_result.get("is_empty"):
             return {
                 "success": True,
                 "has_speech": False,
                 "text": "",
                 "translation": "",
+                "speaker_info": speaker_info,
                 "reason": transcription_result.get("reason", "No speech detected")
             }
-        
+
         original_text = transcription_result["text"]
-        
-        # Step 2: Translate
+
+        # Step 3: Translate
         try:
             # Fix source language for Google Translate
             src_lang = None if source_language in ["auto", "automatic", "", None] else source_language
-            
+
             translation_result = await translate_text(original_text, target_language, src_lang)
             translated_text = translation_result.get("translated_text", "")
         except Exception as e:
             print(f"Translation error: {e}")
             translated_text = f"[Translation error: {str(e)}]"
-        
+
         return {
             "success": True,
             "has_speech": True,
             "text": original_text,
             "translation": translated_text,
+            "speaker_info": speaker_info,
             "timestamp": datetime.now().isoformat()
         }
     
@@ -432,7 +457,7 @@ class RealtimeTranscriptionService:
         """
         for segment in segments:
             speaker = segment.get("speaker", "SPEAKER_1")
-            
+
             # SPEAKER_1 / A = Healthcare Provider (BLUE)
             # SPEAKER_2 / B = Patient/Family (GREEN)
             if speaker in ["SPEAKER_1", "A", "1"]:
@@ -441,8 +466,156 @@ class RealtimeTranscriptionService:
             else:
                 segment["speaker"] = "SPEAKER_2"
                 segment["speaker_role"] = "Patient/Family"
-        
+
         return segments
+
+    def initialize_session_speakers(self, session_id: str, family_id: str):
+        """
+        Initialize speaker tracking for a session
+        """
+        self.session_speakers[session_id] = {
+            "family_id": family_id,
+            "active_speakers": {},  # Maps voice signatures to speaker IDs
+            "speaker_assignments": {},  # Tracks assigned speaker roles
+            "last_speaker": None,
+            "timestamps": []
+        }
+
+    async def identify_current_speaker(
+        self,
+        audio_file,
+        session_id: str
+    ) -> Dict[str, Any]:
+        """
+        Identify the speaker in the current audio chunk
+        """
+        from services.voice_enrollment_service import voice_enrollment_service
+
+        try:
+            # Load audio for feature extraction
+            await audio_file.seek(0)
+            audio_data = await audio_file.read()
+
+            # Create a file-like object for voice enrollment service
+            class TempAudioWrapper:
+                def __init__(self, data):
+                    self.data = data
+                    self.position = 0
+
+                async def read(self):
+                    return self.data
+
+                async def seek(self, pos):
+                    self.position = pos
+
+            temp_wrapper = TempAudioWrapper(audio_data)
+            enrolled_speaker, confidence = await voice_enrollment_service.identify_enrolled_speaker(
+                temp_wrapper,
+                self.session_speakers[session_id]["family_id"]
+            )
+
+            # If we recognized an enrolled voice, assign it consistently
+            if enrolled_speaker and confidence >= 0.70:
+                # Assign as SPEAKER_2 (family/patient) if it's an enrolled speaker
+                speaker_id = "SPEAKER_2"
+                speaker_role = "Patient/Family"
+                speaker_name = enrolled_speaker
+            else:
+                # Unknown speaker - likely healthcare provider
+                speaker_id = "SPEAKER_1"
+                speaker_role = "Healthcare Provider"
+                speaker_name = "Unknown"
+
+            # Store in session for continuity
+            current_session = self.session_speakers.get(session_id, {})
+            if current_session:
+                current_session["last_speaker"] = {
+                    "id": speaker_id,
+                    "role": speaker_role,
+                    "name": speaker_name,
+                    "confidence": confidence
+                }
+
+            return {
+                "speaker_id": speaker_id,
+                "speaker_role": speaker_role,
+                "speaker_name": speaker_name,
+                "confidence": confidence,
+                "is_enrolled": bool(enrolled_speaker)
+            }
+
+        except Exception as e:
+            print(f"Speaker identification error: {e}")
+            # Fallback to default speaker
+            return {
+                "speaker_id": "SPEAKER_1",
+                "speaker_role": "Healthcare Provider",
+                "speaker_name": "Unknown",
+                "confidence": 0.0,
+                "is_enrolled": False
+            }
+
+    async def transcribe_and_translate_instant_with_speaker(
+        self,
+        audio_file,
+        target_language: str = "vi",
+        source_language: Optional[str] = None,
+        session_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Fast transcription + translation + speaker ID for real-time display.
+        """
+        from services.translation_service import translate_text
+
+        # Step 1: Get speaker ID if session tracking is active
+        if session_id and session_id in self.session_speakers:
+            speaker_info = await self.identify_current_speaker(audio_file, session_id)
+        else:
+            # Default behavior without speaker tracking
+            speaker_info = {
+                "speaker_id": "SPEAKER_1",
+                "speaker_role": "Healthcare Provider",
+                "speaker_name": "Unknown",
+                "confidence": 0.5,
+                "is_enrolled": False
+            }
+
+        # Step 2: Fast transcription
+        # Create a new file object for transcription since we consumed audio data
+        await audio_file.seek(0)
+        transcription_result = await self.transcribe_chunk_instant(audio_file, source_language)
+
+        if not transcription_result["success"] or transcription_result.get("is_empty"):
+            return {
+                "success": True,
+                "has_speech": False,
+                "text": "",
+                "translation": "",
+                "speaker_info": speaker_info,
+                "reason": transcription_result.get("reason", "No speech detected")
+            }
+
+        original_text = transcription_result["text"]
+
+        # Step 3: Translate
+        try:
+            # Fix source language for Google Translate
+            src_lang = None if source_language in ["auto", "automatic", "", None] else source_language
+
+            translation_result = await translate_text(original_text, target_language, src_lang)
+            translated_text = translation_result.get("translated_text", "")
+        except Exception as e:
+            print(f"Translation error: {e}")
+            translated_text = f"[Translation error: {str(e)}]"
+
+        return {
+            "success": True,
+            "has_speech": True,
+            "text": original_text,
+            "translation": translated_text,
+            "speaker_info": speaker_info,
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # Global instance
