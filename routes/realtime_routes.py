@@ -17,28 +17,35 @@ router = APIRouter()
 async def instant_transcribe(
     file: UploadFile = File(...),
     target_language: str = Form("vi"),
-    source_language: Optional[str] = Form("auto")
+    source_language: Optional[str] = Form("auto"),
+    session_id: Optional[str] = Form(None),
+    family_id: Optional[str] = Form(None)
 ):
     """
     FAST transcription for real-time display during recording.
-    
+
     - Uses OpenAI Whisper API (2-3 second latency)
-    - Returns transcription + translation
-    - NO speaker detection (that happens after recording)
-    
+    - Returns transcription + translation + speaker detection
+    - When session_id provided, attempts to identify speakers during recording
+
     Use this endpoint every 3-5 seconds during recording.
     """
     from services.realtime_transcription_service import realtime_transcription_service
-    
+
+    # Initialize speaker tracking if session ID and family ID are provided
+    if session_id and family_id:
+        realtime_transcription_service.initialize_session_speakers(session_id, family_id)
+
     try:
         result = await realtime_transcription_service.transcribe_and_translate_instant(
             audio_file=file,
             target_language=target_language,
-            source_language=source_language if source_language != "auto" else None
+            source_language=source_language if source_language != "auto" else None,
+            session_id=session_id
         )
-        
+
         return result
-        
+
     except Exception as e:
         print(f"Instant transcribe error: {e}")
         return {

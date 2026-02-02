@@ -359,10 +359,10 @@
             if (allAudioChunks.length < 3 || isProcessingChunk) return;
 
             isProcessingChunk = true;
-            
+
             // Create blob from ALL chunks (includes header from chunk 0)
             const audioBlob = new Blob(allAudioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
-            
+
             // Skip if audio hasn't grown enough since last process
             if (audioBlob.size < lastProcessedSize + 10000) {
                 isProcessingChunk = false;
@@ -373,6 +373,8 @@
             formData.append('file', audioBlob, 'chunk.webm');
             formData.append('target_language', document.getElementById('targetLanguage').value);
             formData.append('source_language', 'auto');
+            formData.append('session_id', sessionId);
+            formData.append('family_id', FAMILY_ID);
 
             try {
                 document.getElementById('statusText').textContent = 'Processing...';
@@ -387,18 +389,18 @@
                 if (result.success && result.has_speech && result.text) {
                     const fullText = result.text.trim();
                     const fullTranslation = (result.translation || '').trim();
-                    
+
                     // FIX: Only show NEW content by comparing with previous full text
                     if (fullText !== lastFullText && fullText.length > lastFullText.length) {
                         // Find where the new content starts
                         let newText = fullText;
                         let newTranslation = fullTranslation;
-                        
+
                         if (lastFullText.length > 0) {
                             // Extract only the new portion
                             // Find where old text ends in new text
                             const oldLength = lastFullText.length;
-                            
+
                             // Try to find a good split point (after last matching content)
                             if (fullText.startsWith(lastFullText)) {
                                 newText = fullText.substring(oldLength).trim();
@@ -415,7 +417,7 @@
                                 }
                                 newText = fullText.substring(overlap).trim();
                             }
-                            
+
                             // Approximate new translation (translations don't map 1:1)
                             if (newText.length > 0 && fullTranslation.length > 0) {
                                 const ratio = newText.length / fullText.length;
@@ -423,7 +425,7 @@
                                 newTranslation = fullTranslation.substring(transStart).trim();
                             }
                         }
-                        
+
                         // Only add if we have meaningful new content (more than 3 chars)
                         if (newText.length > 3) {
                             instantTranscripts.push({
@@ -431,19 +433,20 @@
                                 translation: newTranslation,
                                 timestamp: result.timestamp
                             });
-                            
-                            displayInstantSegment({ 
-                                text: newText, 
-                                translation: newTranslation 
+
+                            displayInstantSegment({
+                                text: newText,
+                                translation: newTranslation,
+                                speaker_info: result.speaker_info || null
                             });
-                            
+
                             document.getElementById('segmentCount').textContent = `${instantTranscripts.length} segments`;
                         }
-                        
+
                         // Update tracking
                         lastFullText = fullText;
                     }
-                    
+
                     lastProcessedSize = audioBlob.size;
                 }
 
@@ -461,16 +464,37 @@
         function displayInstantSegment(result) {
             const container = document.getElementById('transcriptContent');
             const segmentIndex = instantTranscripts.length;
-            
-            // Alternate colors for visual distinction during recording
-            // Real speaker assignment happens after finalize
-            const isEven = segmentIndex % 2 === 0;
-            
+
+            // Determine speaker based on API response if available
+            let speakerClass = 'speaker-1'; // Default to provider (blue)
+            let speakerRoleClass = 'provider';
+            let speakerLabel = 'Healthcare Provider';
+
+            // Check if speaker info is available from API
+            if (result.speaker_info) {
+                const speakerInfo = result.speaker_info;
+
+                if (speakerInfo.speaker_id === 'SPEAKER_2') {
+                    // Patient/Family member (green)
+                    speakerClass = 'speaker-2';
+                    speakerRoleClass = 'patient';
+                    speakerLabel = speakerInfo.speaker_name !== 'Unknown' ?
+                                   `Family Member (${speakerInfo.speaker_name})` :
+                                   'Patient/Family';
+                } else {
+                    // Healthcare Provider (blue)
+                    speakerClass = 'speaker-1';
+                    speakerRoleClass = 'provider';
+                    speakerLabel = 'Healthcare Provider';
+                }
+            }
+
             const segmentEl = document.createElement('div');
-            segmentEl.className = `segment ${isEven ? 'speaker-1' : 'speaker-2'}`;
+            segmentEl.className = `segment ${speakerClass}`;
             segmentEl.innerHTML = `
-                <div class="segment-speaker ${isEven ? 'provider' : 'patient'}">
-                    Segment ${segmentIndex} (speaker TBD)
+                <div class="segment-speaker ${speakerRoleClass}">
+                    ${escapeHtml(speakerLabel)} ${(result.speaker_info && result.speaker_info.confidence) ?
+                       `(Confidence: ${(result.speaker_info.confidence * 100).toFixed(0)}%)` : ''}
                 </div>
                 <div class="segment-text">${escapeHtml(result.text)}</div>
                 ${result.translation ? `<div class="segment-translation">Translation: ${escapeHtml(result.translation)}</div>` : ''}
