@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
+    <title>MedJournee - Record Visit</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <style>
+        /* Record page-specific styles */
+
+        /* Setup section */
+        .setup-section {
+            padding: 20px;
+            background: var(--glass-medium);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            margin: 10px;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px var(--shadow-colored);
+        }
+
+        .form-group label {
+            color: var(--text-secondary);
+        }
+
+        .form-group input, .form-group select {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+        }
+
+        /* Recording section */
+        .recording-section { padding: 20px; text-align: center; }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, var(--sunset-coral), rgba(211, 47, 47, 0.95));
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3);
+        }
+
+        .record-btn:hover { transform: scale(1.05); box-shadow: 0 12px 40px rgba(255, 107, 107, 0.4); }
+        .record-btn:active { transform: scale(0.95); }
+
+        .record-btn.recording {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(135deg, var(--color-success), rgba(56, 142, 60, 0.95));
+            box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(76, 175, 80, 0); }
+        }
+
+        .status-text { font-size: 16px; margin: 15px 0; color: var(--text-secondary); }
+        .timer { font-size: 48px; font-weight: 200; margin: 10px 0; color: var(--text-primary); }
+
+        /* Transcript section */
+        .transcript-section {
+            background: var(--glass-medium);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            margin: 10px;
+            border-radius: var(--radius-lg);
+            padding: 15px;
+            color: var(--text-primary);
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .transcript-header {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .segment {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--glass-light);
+            border-left: 4px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: segmentIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes segmentIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .segment.speaker-1 {
+            background: rgba(74, 144, 226, 0.12);
+            border-left-color: var(--sunset-blue);
+        }
+
+        .segment.speaker-2 {
+            background: rgba(76, 175, 80, 0.12);
+            border-left-color: var(--color-success);
+        }
+
+        .segment-speaker {
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: var(--text-muted);
+        }
+
+        .segment-speaker.provider { color: var(--sunset-blue); }
+        .segment-speaker.patient { color: #81c784; }
+
+        .segment-text { margin-bottom: 4px; color: var(--text-primary); }
+
+        .segment-translation {
+            color: var(--text-secondary);
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        /* Action buttons override */
+        .action-buttons {
+            padding: 20px;
+            justify-content: center;
+            position: static;
+            background: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            box-shadow: none;
+            border-top: none;
+        }
+
+        .action-btn {
+            padding: 15px 30px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-full);
+        }
+
+        .btn-cancel {
+            background: var(--glass-light);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: var(--text-primary);
+        }
+
+        .btn-cancel:hover { background: rgba(255, 255, 255, 0.15); }
+
+        .btn-save {
+            background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-coral));
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: white;
+            box-shadow: 0 4px 20px rgba(255, 140, 66, 0.3);
+        }
+
+        .btn-save:hover:not(:disabled) { box-shadow: 0 8px 30px rgba(255, 140, 66, 0.4); }
+        .btn-save:disabled { background: rgba(102, 102, 102, 0.3); cursor: not-allowed; box-shadow: none; }
+
+        .status-badge.processing { background: var(--sunset-orange); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">Back</button>
+        <div class="header-title">Record Medical Visit</div>
+    </div>
+
+    <div class="setup-section">
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1;">
+                <label>Patient Name</label>
+                <input type="text" id="patientName" placeholder="Enter patient name" value="Grandma">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Family ID (for enrollment)</label>
+                <input type="text" id="familyId" placeholder="e.g., kristy" value="">
+            </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+                <div class="form-group">
+                    <label style="color:#90CAF9; font-weight:600;">Provider Speaks</label>
+                    <select id="providerSpoken">
+                        <option value="en" selected>English</option>
+                        <option value="vi">Vietnamese</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh-CN">Chinese (Simplified)</option>
+                        <option value="zh-TW">Chinese (Traditional)</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="th">Thai</option>
+                        <option value="tl">Tagalog</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="color:#90CAF9;">Translate To</label>
+                    <select id="providerTranslateTo">
+                        <option value="en">English</option>
+                        <option value="vi" selected>Vietnamese</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh-CN">Chinese (Simplified)</option>
+                        <option value="zh-TW">Chinese (Traditional)</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="th">Thai</option>
+                        <option value="tl">Tagalog</option>
+                    </select>
+                </div>
+            </div>
+            <div style="flex:1;">
+                <div class="form-group">
+                    <label style="color:#A5D6A7; font-weight:600;">Family Speaks</label>
+                    <select id="familySpoken">
+                        <option value="en">English</option>
+                        <option value="vi" selected>Vietnamese</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh-CN">Chinese (Simplified)</option>
+                        <option value="zh-TW">Chinese (Traditional)</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="th">Thai</option>
+                        <option value="tl">Tagalog</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="color:#A5D6A7;">Translate To</label>
+                    <select id="familyTranslateTo">
+                        <option value="en" selected>English</option>
+                        <option value="vi">Vietnamese</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh-CN">Chinese (Simplified)</option>
+                        <option value="zh-TW">Chinese (Traditional)</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="th">Thai</option>
+                        <option value="tl">Tagalog</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="recording-section">
+        <span class="status-badge live" id="statusBadge" style="display: none;">LIVE</span>
+        
+        <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+            TAP TO<br>START
+        </button>
+
+        <div class="status-text" id="statusText">Tap to begin recording</div>
+        <div class="timer" id="timer">00:00</div>
+    </div>
+
+    <div class="transcript-section" id="transcriptSection" style="display: none;">
+        <div class="transcript-header">
+            <span>Live Transcript</span>
+            <span id="segmentCount">0 segments</span>
+        </div>
+        <div id="transcriptContent"></div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="action-btn btn-cancel" onclick="goBack()">Cancel</button>
+        <button class="action-btn btn-save" id="saveBtn" onclick="showSaveOptions()" disabled>
+            Finish Recording
+        </button>
+    </div>
+
+    <!-- Save Options Modal -->
+    <div class="save-options-modal" id="saveOptionsModal">
+        <div class="save-options-content">
+            <h3 style="margin-bottom: 20px; color: #333;">How would you like to save?</h3>
+
+            <button class="save-option-btn ai-summary" onclick="finishAndProcess(false)">
+                <div class="option-icon">🤖</div>
+                <div class="option-text">
+                    <strong>AI Summary</strong>
+                    <span>Generate structured journal with diagnoses, medications, and family summary</span>
+                </div>
+            </button>
+
+            <button class="save-option-btn raw-transcript" onclick="finishAndProcess(true)">
+                <div class="option-icon">📝</div>
+                <div class="option-text">
+                    <strong>Raw Transcript Only</strong>
+                    <span>Save conversation with speaker labels, no AI processing</span>
+                </div>
+            </button>
+
+            <button class="save-option-cancel" onclick="hideSaveOptions()">Cancel</button>
+        </div>
+    </div>
+
+    <style>
+        .save-options-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .save-options-modal.show {
+            display: flex;
+        }
+        .save-options-content {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+            animation: modalIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .save-option-btn {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid rgba(224, 224, 224, 0.5);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .save-option-btn:hover {
+            border-color: rgba(76, 175, 80, 0.4);
+            background: rgba(248, 255, 248, 0.8);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+        .save-option-btn.ai-summary:hover {
+            border-color: rgba(33, 150, 243, 0.4);
+            background: rgba(240, 248, 255, 0.8);
+        }
+        .option-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .option-text {
+            display: flex;
+            flex-direction: column;
+        }
+        .option-text strong {
+            font-size: 16px;
+            color: #333;
+        }
+        .option-text span {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .save-option-cancel {
+            margin-top: 15px;
+            padding: 10px 30px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #666;
+        }
+        .save-option-cancel:hover {
+            background: #e0e0e0;
+        }
+    </style>
+
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="spinner"></div>
+        <div style="color: white; font-size: 18px; margin-bottom: 20px;" id="overlayText">
+            Processing...
+        </div>
+        <div class="processing-steps" id="processingSteps">
+            <div class="step" id="step1">Uploading audio...</div>
+            <div class="step" id="step2">Detecting speakers...</div>
+            <div class="step" id="step3">Matching enrolled voices...</div>
+            <div class="step" id="step4">Generating AI journal...</div>
+            <div class="step" id="step5">Saving to database...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const USER_ID = 'user-001';
+
+        // Get FAMILY_ID from input field (dynamic)
+        function getFamilyId() {
+            return document.getElementById('familyId').value.trim() || 'family-001';
+        }
+
+        // Appointment context
+        let appointmentId = null;
+        let appointmentData = null;
+        let todaysAppointments = [];
+
+        // Load saved family ID from localStorage and check for appointment
+        document.addEventListener('DOMContentLoaded', async function() {
+            const savedFamilyId = localStorage.getItem('medjournee_family_id');
+            if (savedFamilyId) {
+                document.getElementById('familyId').value = savedFamilyId;
+            }
+            // Save on change
+            document.getElementById('familyId').addEventListener('change', function() {
+                localStorage.setItem('medjournee_family_id', this.value);
+            });
+
+            // Check for appointment parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            appointmentId = urlParams.get('appointment');
+
+            if (appointmentId) {
+                await loadAppointmentData();
+            } else {
+                // Check for today's appointments
+                await checkTodaysAppointments();
+            }
+        });
+
+        async function loadAppointmentData() {
+            try {
+                const response = await fetch(`${API_BASE}/appointments/${appointmentId}`);
+                const result = await response.json();
+
+                if (result.success && result.appointment) {
+                    appointmentData = result.appointment;
+                    prefillFromAppointment();
+                }
+            } catch (error) {
+                console.error('Failed to load appointment:', error);
+            }
+        }
+
+        function prefillFromAppointment() {
+            if (!appointmentData) return;
+
+            // Pre-fill patient name if provider name available
+            if (appointmentData.provider_name) {
+                // Show appointment context banner
+                showAppointmentBanner();
+            }
+
+            // Show talking points reminder if any
+            if (appointmentData.talking_points && appointmentData.talking_points.length > 0) {
+                showTalkingPointsReminder();
+            }
+        }
+
+        function showAppointmentBanner() {
+            const banner = document.createElement('div');
+            banner.id = 'appointmentBanner';
+            banner.style.cssText = `
+                background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+                padding: 12px 15px;
+                margin: 0 10px 10px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            banner.innerHTML = `
+                <span style="font-size: 24px;">&#128197;</span>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 14px;">${appointmentData.title}</div>
+                    <div style="font-size: 12px; opacity: 0.9;">${appointmentData.provider_name || 'Medical Appointment'}</div>
+                </div>
+                <span style="font-size: 12px; opacity: 0.8;">${appointmentData.talking_points?.length || 0} talking points</span>
+            `;
+
+            const setupSection = document.querySelector('.setup-section');
+            setupSection.parentNode.insertBefore(banner, setupSection);
+        }
+
+        function showTalkingPointsReminder() {
+            const unchecked = appointmentData.talking_points.filter(p => !p.done);
+            if (unchecked.length === 0) return;
+
+            const reminder = document.createElement('div');
+            reminder.id = 'talkingPointsReminder';
+            reminder.style.cssText = `
+                background: rgba(255, 152, 0, 0.2);
+                padding: 12px 15px;
+                margin: 0 10px 10px;
+                border-radius: 12px;
+                border: 1px solid rgba(255, 152, 0, 0.5);
+            `;
+
+            let pointsHtml = unchecked.slice(0, 3).map(p => `
+                <div style="padding: 4px 0; font-size: 13px;">&#9744; ${escapeHtml(p.text)}</div>
+            `).join('');
+
+            if (unchecked.length > 3) {
+                pointsHtml += `<div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">+${unchecked.length - 3} more...</div>`;
+            }
+
+            reminder.innerHTML = `
+                <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px;">&#128221; Remember to discuss:</div>
+                ${pointsHtml}
+            `;
+
+            const banner = document.getElementById('appointmentBanner');
+            if (banner) {
+                banner.parentNode.insertBefore(reminder, banner.nextSibling);
+            }
+        }
+
+        async function checkTodaysAppointments() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`${API_BASE}/appointments/date/${USER_ID}/${today}`);
+                const result = await response.json();
+
+                if (result.success && result.appointments && result.appointments.length > 0) {
+                    todaysAppointments = result.appointments.filter(a => a.status === 'scheduled');
+                    if (todaysAppointments.length > 0) {
+                        showTodaysAppointmentsBanner();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check today appointments:', error);
+            }
+        }
+
+        function showTodaysAppointmentsBanner() {
+            const banner = document.createElement('div');
+            banner.id = 'todaysBanner';
+            banner.style.cssText = `
+                background: rgba(76, 175, 80, 0.2);
+                padding: 12px 15px;
+                margin: 0 10px 10px;
+                border-radius: 12px;
+                border: 1px solid rgba(76, 175, 80, 0.5);
+                cursor: pointer;
+            `;
+            banner.onclick = () => showAppointmentPicker();
+            banner.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">&#128197;</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 13px;">You have ${todaysAppointments.length} appointment(s) today</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Tap to select one to record for</div>
+                    </div>
+                    <span style="font-size: 18px;">&#8250;</span>
+                </div>
+            `;
+
+            const setupSection = document.querySelector('.setup-section');
+            setupSection.parentNode.insertBefore(banner, setupSection);
+        }
+
+        function showAppointmentPicker() {
+            const modal = document.createElement('div');
+            modal.id = 'appointmentPickerModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            `;
+
+            let appointmentsHtml = todaysAppointments.map(appt => `
+                <div style="background: white; padding: 15px; margin: 8px 0; border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;"
+                     onclick="selectAppointment('${appt.id}')"
+                     onmouseover="this.style.borderColor='#4CAF50'"
+                     onmouseout="this.style.borderColor='transparent'">
+                    <div style="font-weight: 600; color: #333;">${appt.title}</div>
+                    ${appt.scheduled_time ? `<div style="font-size: 13px; color: #4CAF50;">${formatTimeDisplay(appt.scheduled_time)}</div>` : ''}
+                    ${appt.provider_name ? `<div style="font-size: 13px; color: #666;">${appt.provider_name}</div>` : ''}
+                    <div style="font-size: 12px; color: #2196F3; margin-top: 4px;">${appt.talking_points_count || 0} talking points</div>
+                </div>
+            `).join('');
+
+            modal.innerHTML = `
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 16px; max-width: 350px; width: 90%;">
+                    <h3 style="color: #333; margin-bottom: 15px; font-size: 18px;">Select Appointment</h3>
+                    ${appointmentsHtml}
+                    <button onclick="closeAppointmentPicker()" style="width: 100%; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; margin-top: 10px; cursor: pointer; color: #666;">
+                        Skip - Record without linking
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function closeAppointmentPicker() {
+            const modal = document.getElementById('appointmentPickerModal');
+            if (modal) modal.remove();
+        }
+
+        async function selectAppointment(apptId) {
+            closeAppointmentPicker();
+            appointmentId = apptId;
+            await loadAppointmentData();
+
+            // Remove today's banner
+            const todaysBanner = document.getElementById('todaysBanner');
+            if (todaysBanner) todaysBanner.remove();
+        }
+
+        function formatTimeDisplay(timeStr) {
+            if (!timeStr) return '';
+            const [hours, minutes] = timeStr.split(':');
+            const h = parseInt(hours);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+        }
+
+        let isRecording = false;
+        let mediaRecorder = null;
+        let allAudioChunks = [];
+        let instantTranscripts = [];
+        let timerInterval = null;
+        let processInterval = null;
+        let seconds = 0;
+        let sessionId = null;
+        let isProcessingChunk = false;
+        
+        // FIX: Track the last processed audio size to detect NEW content
+        let lastProcessedSize = 0;
+        let lastFullText = '';
+
+        function goBack() {
+            if (isRecording && !confirm('Recording in progress. Discard?')) return;
+            stopRecording();
+            window.location.href = '/';
+        }
+
+        async function toggleRecording() {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true }
+                });
+
+                sessionId = `session-${Date.now()}`;
+                
+                let mimeType = 'audio/webm;codecs=opus';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'audio/mp4';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'audio/wav';
+                }
+
+                mediaRecorder = new MediaRecorder(stream, { mimeType });
+                allAudioChunks = [];
+                instantTranscripts = [];
+                lastProcessedSize = 0;
+                lastFullText = '';
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        allAudioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.start(1000);
+                isRecording = true;
+
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('recordBtn').innerHTML = 'RECORDING<br>TAP TO STOP';
+                document.getElementById('statusText').textContent = 'Recording... Speak naturally';
+                document.getElementById('statusBadge').style.display = 'inline-block';
+                document.getElementById('transcriptSection').style.display = 'block';
+                document.getElementById('saveBtn').disabled = true;
+                document.getElementById('transcriptContent').innerHTML = '';
+
+                seconds = 0;
+                timerInterval = setInterval(updateTimer, 1000);
+                processInterval = setInterval(processInstantChunk, 4000);
+
+            } catch (error) {
+                console.error('Microphone error:', error);
+                alert('Could not access microphone: ' + error.message);
+            }
+        }
+
+        function stopRecording() {
+            clearInterval(processInterval);
+            clearInterval(timerInterval);
+            
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+
+            isRecording = false;
+            document.getElementById('recordBtn').classList.remove('recording');
+            document.getElementById('recordBtn').innerHTML = 'TAP TO<br>START';
+            document.getElementById('statusBadge').style.display = 'none';
+            document.getElementById('statusText').textContent = `Recording stopped - ${instantTranscripts.length} segments`;
+            document.getElementById('saveBtn').disabled = instantTranscripts.length === 0;
+        }
+
+        function updateTimer() {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }
+
+        async function processInstantChunk() {
+            if (allAudioChunks.length < 3 || isProcessingChunk) return;
+
+            isProcessingChunk = true;
+            
+            // Create blob from ALL chunks (includes header from chunk 0)
+            const audioBlob = new Blob(allAudioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+            
+            // Skip if audio hasn't grown enough since last process
+            if (audioBlob.size < lastProcessedSize + 10000) {
+                isProcessingChunk = false;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'chunk.webm');
+            formData.append('provider_spoken', document.getElementById('providerSpoken').value);
+            formData.append('provider_translate_to', document.getElementById('providerTranslateTo').value);
+            formData.append('family_spoken', document.getElementById('familySpoken').value);
+            formData.append('family_translate_to', document.getElementById('familyTranslateTo').value);
+            formData.append('family_id', getFamilyId());
+
+            try {
+                document.getElementById('statusText').textContent = 'Processing...';
+
+                const response = await fetch(`${API_BASE}/realtime/instant-transcribe/`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Always update lastProcessedSize so we don't re-send the same data on failure
+                lastProcessedSize = audioBlob.size;
+
+                if (result.success && result.has_speech && result.text) {
+                    const fullText = result.text.trim();
+                    const fullTranslation = (result.translation || '').trim();
+
+                    // FIX: Only show NEW content by comparing with previous full text
+                    if (fullText !== lastFullText && fullText.length > lastFullText.length) {
+                        // Find where the new content starts
+                        let newText = fullText;
+                        let newTranslation = fullTranslation;
+
+                        if (lastFullText.length > 0) {
+                            // Extract only the new portion
+                            // Find where old text ends in new text
+                            const oldLength = lastFullText.length;
+
+                            // Try to find a good split point (after last matching content)
+                            if (fullText.startsWith(lastFullText)) {
+                                newText = fullText.substring(oldLength).trim();
+                            } else {
+                                // Texts don't align perfectly - find overlap
+                                let overlap = 0;
+                                for (let i = Math.min(50, lastFullText.length); i > 0; i--) {
+                                    const ending = lastFullText.substring(lastFullText.length - i);
+                                    const pos = fullText.indexOf(ending);
+                                    if (pos !== -1) {
+                                        overlap = pos + i;
+                                        break;
+                                    }
+                                }
+                                newText = fullText.substring(overlap).trim();
+                            }
+
+                            // Approximate new translation (translations don't map 1:1)
+                            if (newText.length > 0 && fullTranslation.length > 0) {
+                                const ratio = newText.length / fullText.length;
+                                const transStart = Math.floor(fullTranslation.length * (1 - ratio));
+                                newTranslation = fullTranslation.substring(transStart).trim();
+                            }
+                        }
+
+                        // Only add if we have meaningful new content (more than 3 chars)
+                        if (newText.length > 3) {
+                            instantTranscripts.push({
+                                text: newText,
+                                translation: newTranslation,
+                                timestamp: result.timestamp,
+                                detected_language: result.detected_language || '',
+                                speaker_role: result.speaker_role || 'provider',
+                                speaker_name: result.speaker_name || ''
+                            });
+
+                            displayInstantSegment({
+                                text: newText,
+                                translation: newTranslation,
+                                speaker_role: result.speaker_role || 'provider',
+                                speaker_name: result.speaker_name || '',
+                                enrollment_confidence: result.enrollment_confidence || 0
+                            });
+
+                            document.getElementById('segmentCount').textContent = `${instantTranscripts.length} segments`;
+                        }
+
+                        // Update tracking
+                        lastFullText = fullText;
+                    }
+                }
+
+                if (isRecording) {
+                    document.getElementById('statusText').textContent = 'Recording... Speak naturally';
+                }
+
+            } catch (error) {
+                console.error('Instant transcribe error:', error);
+            } finally {
+                isProcessingChunk = false;
+            }
+        }
+
+        function displayInstantSegment(result) {
+            const container = document.getElementById('transcriptContent');
+            const segmentIndex = instantTranscripts.length;
+
+            const isProvider = result.speaker_role === 'provider' ||
+                               result.speaker_role === 'Healthcare Provider';
+
+            // Use enrolled speaker name if available, otherwise fall back to role
+            let speakerLabel;
+            if (result.speaker_name) {
+                const confidence = result.enrollment_confidence ?
+                    ` (${Math.round(result.enrollment_confidence * 100)}%)` : '';
+                speakerLabel = `${result.speaker_name}${confidence}`;
+            } else {
+                speakerLabel = isProvider ? 'Provider' : 'Family';
+            }
+
+            const segmentEl = document.createElement('div');
+            segmentEl.className = `segment ${isProvider ? 'speaker-1' : 'speaker-2'}`;
+            segmentEl.innerHTML = `
+                <div class="segment-speaker ${isProvider ? 'provider' : 'patient'}">
+                    ${speakerLabel} - Segment ${segmentIndex}
+                </div>
+                <div class="segment-text">${escapeHtml(result.text)}</div>
+                ${result.translation ? `<div class="segment-translation">Translation: ${escapeHtml(result.translation)}</div>` : ''}
+            `;
+
+            container.appendChild(segmentEl);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Escape HTML to prevent XSS and encoding issues
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showSaveOptions() {
+            if (allAudioChunks.length === 0) {
+                alert('No audio recorded');
+                return;
+            }
+            document.getElementById('saveOptionsModal').classList.add('show');
+        }
+
+        function hideSaveOptions() {
+            document.getElementById('saveOptionsModal').classList.remove('show');
+        }
+
+        async function finishAndProcess(skipAiSummary = false) {
+            hideSaveOptions();
+
+            if (allAudioChunks.length === 0) {
+                alert('No audio recorded');
+                return;
+            }
+
+            document.getElementById('processingOverlay').classList.add('show');
+
+            // Update processing steps based on mode
+            if (skipAiSummary) {
+                document.getElementById('step4').textContent = 'Skipping AI summary...';
+            }
+
+            setStep(1);
+
+            try {
+                const fullAudioBlob = new Blob(allAudioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+                console.log('Full audio size:', fullAudioBlob.size, 'bytes');
+                console.log('Skip AI Summary:', skipAiSummary);
+
+                setStep(1, 'done');
+                setStep(2);
+                document.getElementById('overlayText').textContent = 'Detecting speakers (15-30 sec)...';
+
+                const formData = new FormData();
+                formData.append('file', fullAudioBlob, 'full_audio.webm');
+                formData.append('session_id', sessionId);
+                formData.append('family_id', getFamilyId());
+                formData.append('user_id', USER_ID);
+                formData.append('patient_name', document.getElementById('patientName').value || 'Patient');
+                formData.append('provider_spoken', document.getElementById('providerSpoken').value);
+                formData.append('provider_translate_to', document.getElementById('providerTranslateTo').value);
+                formData.append('family_spoken', document.getElementById('familySpoken').value);
+                formData.append('family_translate_to', document.getElementById('familyTranslateTo').value);
+                formData.append('instant_transcripts', JSON.stringify(instantTranscripts));
+                formData.append('skip_ai_summary', skipAiSummary ? 'true' : 'false');
+
+                const response = await fetch(`${API_BASE}/realtime/finalize-session/`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Finalize result:', result);
+
+                setStep(2, 'done');
+                setStep(3, 'done');
+                setStep(4, 'done');
+                setStep(5, 'done');
+
+                if (result.success) {
+                    const modeText = skipAiSummary ? 'Transcript saved!' : 'Journal created!';
+                    document.getElementById('overlayText').textContent = modeText;
+
+                    // Use session_id from API response to ensure consistency with database
+                    const savedSessionId = result.session_id || sessionId;
+                    const entryId = result.entry_id;
+                    console.log('Saved session:', savedSessionId, 'entry:', entryId);
+
+                    // Link appointment if we have one
+                    if (appointmentId && entryId) {
+                        document.getElementById('overlayText').textContent = 'Linking to appointment...';
+                        try {
+                            await fetch(`${API_BASE}/appointments/${appointmentId}/link/${entryId}`, {
+                                method: 'POST'
+                            });
+                        } catch (e) {
+                            console.error('Failed to link appointment:', e);
+                        }
+                    }
+
+                    document.getElementById('overlayText').textContent = modeText + ' Redirecting...';
+
+                    setTimeout(() => {
+                        window.location.href = `/static/entry.html?session=${savedSessionId}`;
+                    }, 1500);
+                } else {
+                    throw new Error(result.error || 'Processing failed');
+                }
+
+            } catch (error) {
+                console.error('Finalize error:', error);
+                document.getElementById('overlayText').textContent = 'Error: ' + error.message;
+                setTimeout(() => {
+                    document.getElementById('processingOverlay').classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        function setStep(num, state = 'active') {
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById(`step${i}`);
+                step.className = 'step';
+                if (i < num || (i === num && state === 'done')) {
+                    step.className = 'step done';
+                } else if (i === num && state === 'active') {
+                    step.className = 'step active';
+                }
+            }
+        }
+
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/realtime/`);
+                if (response.ok) {
+                    console.log('API connected');
+                    document.getElementById('statusText').textContent = 'Ready - tap to start recording';
+                }
+            } catch (e) {
+                document.getElementById('statusText').textContent = 'Cannot connect to server';
+            }
+        });
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
+</body>
+</html>

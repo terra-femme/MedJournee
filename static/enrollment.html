@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
+    <title>MedJournee - Speaker Enrollment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(160deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+            overflow-x: hidden;
+            max-width: 428px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 15px;
+            padding-top: max(15px, env(safe-area-inset-top));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            color: #2e7d32;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .back-btn:hover {
+            transform: translateX(-2px);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .header-spacer {
+            width: 40px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            margin: 15px;
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .section:hover {
+            background: rgba(255, 255, 255, 0.78);
+            box-shadow: 0 6px 30px rgba(0,0,0,0.07);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title span {
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border: 1px solid rgba(224, 224, 224, 0.6);
+            border-radius: 12px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .form-input:focus {
+            border-color: #2e7d32;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border: 1px solid rgba(224, 224, 224, 0.6);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .form-select:focus {
+            border-color: #2e7d32;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+        }
+
+        .record-section {
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.9) 0%, rgba(46, 125, 50, 0.95) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: white;
+            font-size: 48px;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(46, 125, 50, 0.35);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .record-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 40px rgba(46, 125, 50, 0.4);
+        }
+
+        .record-btn:active {
+            transform: scale(0.95);
+        }
+
+        .record-btn.recording {
+            background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+            box-shadow: 0 4px 20px rgba(244, 67, 54, 0.4);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .record-label {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .record-timer {
+            font-size: 32px;
+            font-weight: 300;
+            color: #2e7d32;
+            margin-top: 10px;
+        }
+
+        .record-hint {
+            font-size: 13px;
+            color: #999;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #2e7d32);
+            border-radius: 4px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-fill.complete {
+            background: #2e7d32;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.9) 0%, rgba(46, 125, 50, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(46, 125, 50, 0.25);
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(46, 125, 50, 0.35);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .enrolled-list {
+            margin-top: 10px;
+        }
+
+        .enrolled-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(245, 245, 245, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .enrolled-item:hover {
+            background: rgba(245, 245, 245, 0.8);
+            transform: translateY(-1px);
+        }
+
+        .enrolled-info {
+            flex: 1;
+        }
+
+        .enrolled-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .enrolled-meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .enrolled-badge {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #f44336;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 14px;
+            margin: 15px;
+            font-size: 14px;
+            display: none;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-message.success {
+            display: block;
+            background: rgba(232, 245, 233, 0.8);
+            color: #2e7d32;
+            border: 1px solid rgba(165, 214, 167, 0.5);
+        }
+
+        .status-message.error {
+            display: block;
+            background: rgba(255, 235, 238, 0.8);
+            color: #c62828;
+            border: 1px solid rgba(239, 154, 154, 0.5);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+
+        .empty-state span {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            height: 40px;
+            margin-top: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .waveform.active {
+            opacity: 1;
+        }
+
+        .waveform-bar {
+            width: 4px;
+            background: #4caf50;
+            border-radius: 2px;
+            animation: wave 0.5s ease-in-out infinite;
+        }
+
+        .waveform-bar:nth-child(1) { animation-delay: 0s; }
+        .waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+        .waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+        .waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+        .waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 100% { height: 10px; }
+            50% { height: 35px; }
+        }
+
+        .tips-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tips-list li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .tips-list li span {
+            color: #4caf50;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='/'">&#8592;</button>
+        <div class="header-title">Speaker Enrollment</div>
+        <div class="header-spacer"></div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <!-- Enrollment Form -->
+    <div class="section">
+        <div class="section-title">
+            <span>&#128100;</span>
+            New Enrollment
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Family ID</label>
+            <input type="text" id="familyId" class="form-input" placeholder="e.g., nguyen-family-2024" value="">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Speaker Name</label>
+            <input type="text" id="speakerName" class="form-input" placeholder="e.g., Dr. Smith or Mom">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Role</label>
+            <select id="relationship" class="form-select">
+                <option value="provider">Healthcare Provider (Doctor/Nurse)</option>
+                <option value="patient">Patient</option>
+                <option value="family_member" selected>Family Member / Caregiver</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Recording Section -->
+    <div class="section">
+        <div class="section-title">
+            <span>&#127908;</span>
+            Voice Sample
+        </div>
+
+        <div class="record-section">
+            <button id="recordBtn" class="record-btn" onclick="toggleRecording()">
+                &#9679;
+            </button>
+            <div id="recordLabel" class="record-label">Tap to start recording</div>
+            <div id="recordTimer" class="record-timer">0:00</div>
+
+            <div class="waveform" id="waveform">
+                <div class="waveform-bar"></div>
+                <div class="waveform-bar"></div>
+                <div class="waveform-bar"></div>
+                <div class="waveform-bar"></div>
+                <div class="waveform-bar"></div>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+
+            <div class="record-hint">
+                Record 15-20 seconds of clear speech.<br>
+                Speak naturally as you would in a conversation.
+            </div>
+        </div>
+
+        <button id="submitBtn" class="submit-btn" onclick="submitEnrollment()" disabled>
+            Enroll Voice
+        </button>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="section">
+        <div class="section-title">
+            <span>&#128161;</span>
+            Tips for Best Results
+        </div>
+        <ul class="tips-list">
+            <li><span>&#10004;</span> Find a quiet room with minimal background noise</li>
+            <li><span>&#10004;</span> Hold phone 6-12 inches from your mouth</li>
+            <li><span>&#10004;</span> Speak in your normal conversational voice</li>
+            <li><span>&#10004;</span> Include various words and sentences (not just one word)</li>
+            <li><span>&#10004;</span> One person speaks per enrollment</li>
+        </ul>
+    </div>
+
+    <!-- Enrolled Speakers -->
+    <div class="section">
+        <div class="section-title">
+            <span>&#128101;</span>
+            Enrolled Speakers
+        </div>
+        <div id="enrolledList" class="enrolled-list">
+            <div class="empty-state">
+                <span>&#128100;</span>
+                No speakers enrolled yet.<br>
+                Enter a Family ID to see enrollments.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingStartTime = null;
+        let timerInterval = null;
+        let audioBlob = null;
+
+        const recordBtn = document.getElementById('recordBtn');
+        const recordLabel = document.getElementById('recordLabel');
+        const recordTimer = document.getElementById('recordTimer');
+        const progressFill = document.getElementById('progressFill');
+        const waveform = document.getElementById('waveform');
+        const submitBtn = document.getElementById('submitBtn');
+        const familyIdInput = document.getElementById('familyId');
+
+        // Load family ID from localStorage
+        const savedFamilyId = localStorage.getItem('medjournee_family_id');
+        if (savedFamilyId) {
+            familyIdInput.value = savedFamilyId;
+            loadEnrollments(savedFamilyId);
+        }
+
+        // Save family ID when changed
+        familyIdInput.addEventListener('change', function() {
+            localStorage.setItem('medjournee_family_id', this.value);
+            if (this.value) {
+                loadEnrollments(this.value);
+            }
+        });
+
+        async function toggleRecording() {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 16000
+                    }
+                });
+
+                // Determine best format
+                const mimeTypes = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/mp4',
+                    'audio/ogg'
+                ];
+
+                let mimeType = 'audio/webm';
+                for (const type of mimeTypes) {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        mimeType = type;
+                        break;
+                    }
+                }
+
+                mediaRecorder = new MediaRecorder(stream, { mimeType });
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(audioChunks, { type: mimeType });
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Enable submit if we have enough audio
+                    const duration = (Date.now() - recordingStartTime) / 1000;
+                    if (duration >= 15) {
+                        submitBtn.disabled = false;
+                        progressFill.classList.add('complete');
+                    }
+                };
+
+                mediaRecorder.start(1000); // Collect data every second
+                recordingStartTime = Date.now();
+
+                // Update UI
+                recordBtn.classList.add('recording');
+                recordBtn.innerHTML = '&#9632;'; // Stop symbol
+                recordLabel.textContent = 'Recording... Tap to stop';
+                waveform.classList.add('active');
+                submitBtn.disabled = true;
+
+                // Start timer
+                timerInterval = setInterval(updateTimer, 100);
+
+            } catch (error) {
+                console.error('Recording error:', error);
+                showStatus('Could not access microphone. Please allow microphone access.', 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            clearInterval(timerInterval);
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = '&#9679;'; // Record symbol
+            waveform.classList.remove('active');
+
+            const duration = (Date.now() - recordingStartTime) / 1000;
+            if (duration < 15) {
+                recordLabel.textContent = `Recording too short (${Math.floor(duration)}s). Need 15+ seconds.`;
+                showStatus('Please record at least 15 seconds of speech.', 'error');
+            } else {
+                recordLabel.textContent = `Recording complete (${Math.floor(duration)}s). Ready to enroll!`;
+            }
+        }
+
+        function updateTimer() {
+            const elapsed = (Date.now() - recordingStartTime) / 1000;
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = Math.floor(elapsed % 60);
+            recordTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            // Update progress (target: 20 seconds)
+            const progress = Math.min(100, (elapsed / 20) * 100);
+            progressFill.style.width = `${progress}%`;
+
+            // Auto-stop at 30 seconds
+            if (elapsed >= 30) {
+                stopRecording();
+            }
+        }
+
+        async function submitEnrollment() {
+            const familyId = document.getElementById('familyId').value.trim();
+            const speakerName = document.getElementById('speakerName').value.trim();
+            const relationship = document.getElementById('relationship').value;
+
+            if (!familyId || !speakerName) {
+                showStatus('Please enter Family ID and Speaker Name.', 'error');
+                return;
+            }
+
+            if (!audioBlob) {
+                showStatus('Please record a voice sample first.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enrolling...';
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'enrollment.webm');
+                formData.append('family_id', familyId);
+                formData.append('speaker_name', speakerName);
+                formData.append('relationship', relationship);
+
+                const response = await fetch('/enrollment/enroll', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(`Successfully enrolled ${speakerName}! Quality score: ${(result.enrollment_quality * 100).toFixed(0)}%`, 'success');
+
+                    // Reset form
+                    document.getElementById('speakerName').value = '';
+                    audioBlob = null;
+                    progressFill.style.width = '0%';
+                    progressFill.classList.remove('complete');
+                    recordTimer.textContent = '0:00';
+                    recordLabel.textContent = 'Tap to start recording';
+
+                    // Refresh enrollment list
+                    loadEnrollments(familyId);
+                } else {
+                    showStatus(result.error || 'Enrollment failed. Please try again.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Enrollment error:', error);
+                showStatus('Network error. Please check your connection.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enroll Voice';
+            }
+        }
+
+        async function loadEnrollments(familyId) {
+            if (!familyId) return;
+
+            try {
+                const response = await fetch(`/enrollment/list/${encodeURIComponent(familyId)}`);
+                const data = await response.json();
+
+                const listEl = document.getElementById('enrolledList');
+
+                if (data.enrollments && data.enrollments.length > 0) {
+                    listEl.innerHTML = data.enrollments.map(e => `
+                        <div class="enrolled-item">
+                            <div class="enrolled-info">
+                                <div class="enrolled-name">${escapeHtml(e.speaker_name)}</div>
+                                <div class="enrolled-meta">
+                                    ${e.relationship} &bull; Quality: ${(e.quality_score * 100).toFixed(0)}% &bull;
+                                    ${new Date(e.enrollment_date).toLocaleDateString()}
+                                </div>
+                            </div>
+                            <span class="enrolled-badge">${getRoleBadge(e.relationship)}</span>
+                            <button class="delete-btn" onclick="deleteEnrollment('${e.id}', '${familyId}')">&#128465;</button>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <span>&#128100;</span>
+                            No speakers enrolled for this family yet.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading enrollments:', error);
+            }
+        }
+
+        async function deleteEnrollment(enrollmentId, familyId) {
+            if (!confirm('Delete this voice enrollment?')) return;
+
+            try {
+                const response = await fetch(`/enrollment/delete/${enrollmentId}?family_id=${encodeURIComponent(familyId)}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showStatus('Enrollment deleted.', 'success');
+                    loadEnrollments(familyId);
+                } else {
+                    showStatus('Failed to delete enrollment.', 'error');
+                }
+            } catch (error) {
+                showStatus('Network error.', 'error');
+            }
+        }
+
+        function getRoleBadge(relationship) {
+            const badges = {
+                'provider': '&#129658; Provider',
+                'patient': '&#128149; Patient',
+                'family_member': '&#128106; Family'
+            };
+            return badges[relationship] || '&#128100; Member';
+        }
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
+</body>
+</html>

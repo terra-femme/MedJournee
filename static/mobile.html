@@ -2,492 +2,421 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
     <title>MedJournee - Medical Journal</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
     <style>
-        * {
+        /* Calendar Styles (page-specific) */
+        .calendar-container {
+            background: var(--glass-medium);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 16px;
             margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            overflow-x: hidden;
-            max-width: 428px;
-            margin: 0 auto;
-            height: 100vh;
-        }
-
-        /* Header */
-        .header {
-            background: white;
-            padding: 15px;
+        .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            margin-bottom: 16px;
         }
 
-        .menu-btn {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        .header-title {
-            font-size: 22px;
-            font-weight: 300;
-            color: #333;
-        }
-
-        .header-icons {
-            display: flex;
-            gap: 12px;
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        /* Navigation Drawer */
-        .nav-drawer {
-            position: fixed;
-            top: 0;
-            left: -320px;
-            width: 320px;
-            height: 100vh;
-            background: white;
-            box-shadow: 2px 0 20px rgba(0,0,0,0.3);
-            transition: left 0.3s ease;
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .nav-drawer.open {
-            left: 0;
-        }
-
-        .nav-header {
-            padding: 20px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .nav-header h2 {
-            font-size: 24px;
-            font-weight: 300;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .nav-section {
-            padding: 20px 0;
-        }
-
-        .nav-section-title {
-            padding: 0 20px 10px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-item {
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .nav-item:hover {
-            background: #f5f5f5;
-        }
-
-        .nav-item-content {
+        .calendar-nav {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .nav-icon {
-            font-size: 20px;
-            color: #2196F3;
+        .calendar-nav-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            color: var(--sunset-peach);
         }
 
-        .nav-label {
-            font-size: 16px;
-            color: #333;
-        }
-
-        .nav-arrow {
-            color: #ccc;
+        .calendar-month-year {
             font-size: 18px;
-        }
-
-        /* Overlay */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            z-index: 999;
-        }
-
-        .overlay.show {
-            display: block;
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 20px 16px;
-            padding-bottom: 100px;
-        }
-
-        .year-header {
-            font-size: 18px;
-            color: #999;
             font-weight: 500;
-            margin-bottom: 16px;
-        }
-
-        .loading {
+            color: var(--text-primary);
+            min-width: 150px;
             text-align: center;
-            padding: 40px;
-            color: #666;
         }
 
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #2196F3;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Entry Card */
-        .entry-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .calendar-today-btn {
+            background: rgba(255, 140, 66, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 140, 66, 0.25);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            font-size: 14px;
+            color: var(--sunset-peach);
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border-left: 4px solid #2196F3;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .entry-card:active {
-            transform: scale(0.98);
+        .calendar-today-btn:hover {
+            background: rgba(255, 140, 66, 0.2);
         }
 
-        .entry-card.provider { border-left-color: #2196F3; }
-        .entry-card.visit { border-left-color: #4CAF50; }
-        .entry-card.lab { border-left-color: #FF9800; }
-
-        .entry-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
         }
 
-        .entry-date {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .entry-day {
-            font-size: 36px;
-            font-weight: bold;
-            color: #333;
-            line-height: 1;
-        }
-
-        .entry-month {
-            font-size: 16px;
-            color: #666;
-        }
-
-        .entry-emoji {
-            font-size: 32px;
-        }
-
-        .entry-title {
-            font-size: 18px;
+        .calendar-weekday {
+            text-align: center;
+            font-size: 12px;
             font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
+            color: var(--text-muted);
+            padding: 8px 0;
         }
 
-        .entry-summary {
-            font-size: 14px;
-            color: #666;
-            line-height: 1.5;
-            display: -webkit-box;
-            /* The following properties are for truncating text after 2 lines in WebKit browsers */
-            -webkit-line-clamp: 2;
-            line-clamp: 2; /* Standard property for compatibility */
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .entry-summary {
-            font-size: 14px;
-            color: #666;
-            line-height: 1.5;
-            display: -webkit-box;
-            /* The following properties are for truncating text after 2 lines in WebKit browsers */
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            line-clamp: 2; /* Standard property for compatibility */
-            box-orient: vertical;
-        }
-        /* Floating Action Buttons */
-        .fab-container {
-            position: fixed;
-            bottom: 24px;
-            left: 0;
-            right: 0;
+        .calendar-day {
+            aspect-ratio: 1;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            gap: 20px;
-            z-index: 90;
-            max-width: 428px;
-            margin: 0 auto;
-        }
-
-        .fab {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
+            justify-content: center;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            font-size: 14px;
+            color: var(--text-primary);
         }
 
-        .fab:active {
-            transform: scale(0.95);
+        .calendar-day:hover {
+            background: rgba(255, 140, 66, 0.1);
+            transform: scale(1.1);
         }
 
-        .fab-secondary {
-            background: #E0E0E0;
-            font-size: 24px;
+        .calendar-day.other-month {
+            color: var(--text-muted);
         }
 
-        .fab-primary {
-            width: 72px;
-            height: 72px;
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-            font-size: 36px;
+        .calendar-day.today {
+            background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-coral));
+            color: white;
+            font-weight: 600;
+        }
+
+        .calendar-day.selected {
+            background: rgba(255, 140, 66, 0.15);
+            color: var(--sunset-peach);
+        }
+
+        .calendar-day.today.selected {
+            background: linear-gradient(135deg, var(--sunset-coral), #e85d5d);
             color: white;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
+        .appointment-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--color-success);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 4px;
         }
 
-        .empty-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-            opacity: 0.3;
+        .calendar-day.today .appointment-dot {
+            background: white;
+            animation: todayPulse 2s infinite;
         }
 
-        /* Mobile optimizations */
-        @media (max-width: 428px) {
-            body {
-                max-width: 100%;
-            }
+        @keyframes todayPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .appointment-dot.multiple::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: inherit;
+            border-radius: 50%;
+            position: absolute;
+            left: 8px;
+        }
+
+        /* Modal appointment cards (inside day modal) */
+        .modal-day-appointments { margin-bottom: 20px; }
+
+        .modal-appointment {
+            background: var(--glass-light);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .modal-appointment:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .modal-appointment-time {
+            font-size: 13px;
+            color: var(--sunset-peach);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .modal-appointment-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .modal-appointment-provider {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .modal-add-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-coral));
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .modal-add-btn:hover {
+            box-shadow: 0 4px 20px rgba(255, 140, 66, 0.3);
+        }
+
+        .things-to-mention-section .section-title {
+            color: var(--sunset-peach) !important;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
-        <button class="menu-btn" onclick="toggleDrawer()">☰</button>
+        <button class="menu-btn" onclick="toggleDrawer()">&#9776;</button>
         <div class="header-title">MedJournee</div>
         <div class="header-icons">
-            <button class="icon-btn" onclick="toggleSort()">🔃</button>
-            <button class="icon-btn" onclick="alert('Search feature')">🔍</button>
+            <button class="icon-btn" onclick="goToToday()">Today</button>
+            <button class="icon-btn" onclick="alert('Search coming soon')">&#128269;</button>
         </div>
     </div>
 
-    <!-- Navigation Drawer -->
     <div class="nav-drawer" id="navDrawer">
         <div class="nav-header">
             <h2>MedJournee</h2>
-            <button class="close-btn" onclick="toggleDrawer()">✕</button>
+            <button class="close-btn" onclick="toggleDrawer()">&#10005;</button>
         </div>
 
-        <!-- Entries Section -->
         <div class="nav-section">
+            <div class="nav-section-title">Calendar</div>
+            <div class="nav-item" onclick="goToToday(); toggleDrawer();">
+                <div class="nav-item-content">
+                    <span class="nav-icon">&#128197;</span>
+                    <span class="nav-label">Today</span>
+                    <span class="nav-badge" id="todayBadge"></span>
+                </div>
+                <span class="nav-arrow">&#8250;</span>
+            </div>
+            <div class="nav-item" onclick="showAllAppointments()">
+                <div class="nav-item-content">
+                    <span class="nav-icon">&#128203;</span>
+                    <span class="nav-label">All Appointments</span>
+                </div>
+                <span class="nav-arrow">&#8250;</span>
+            </div>
+        </div>
+
+        <div class="nav-section" style="border-top: 1px solid #e0e0e0;">
             <div class="nav-section-title">Entries</div>
             <div class="nav-item" onclick="filterEntries('visits')">
                 <div class="nav-item-content">
-                    <span class="nav-icon">🩺</span>
+                    <span class="nav-icon">&#129658;</span>
                     <span class="nav-label">Visits</span>
                 </div>
-                <span class="nav-arrow">›</span>
+                <span class="nav-arrow">&#8250;</span>
             </div>
-            <div class="nav-item" onclick="alert('Imaging')">
+            <div class="nav-item" onclick="alert('Coming soon')">
                 <div class="nav-item-content">
-                    <span class="nav-icon">📸</span>
+                    <span class="nav-icon">&#128248;</span>
                     <span class="nav-label">Imaging</span>
                 </div>
-                <span class="nav-arrow">›</span>
+                <span class="nav-arrow">&#8250;</span>
             </div>
-            <div class="nav-item" onclick="alert('Labs')">
+            <div class="nav-item" onclick="alert('Coming soon')">
                 <div class="nav-item-content">
-                    <span class="nav-icon">🧪</span>
+                    <span class="nav-icon">&#129514;</span>
                     <span class="nav-label">Labs</span>
                 </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Surgeries/Biopsies')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">🏥</span>
-                    <span class="nav-label">Surgeries/Biopsies</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Therapy')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">💭</span>
-                    <span class="nav-label">Therapy</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Other')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">⭐</span>
-                    <span class="nav-label">Other</span>
-                </div>
-                <span class="nav-arrow">›</span>
+                <span class="nav-arrow">&#8250;</span>
             </div>
         </div>
 
-        <!-- Tools Section -->
         <div class="nav-section" style="border-top: 1px solid #e0e0e0;">
             <div class="nav-section-title">Tools</div>
-            <div class="nav-item" onclick="alert('Entry Lock')">
+            <div class="nav-item" onclick="window.location.href='/static/record.html'">
                 <div class="nav-item-content">
-                    <span class="nav-icon">🔒</span>
-                    <span class="nav-label">Entry Lock</span>
+                    <span class="nav-icon">&#127908;</span>
+                    <span class="nav-label">New Recording</span>
                 </div>
-                <span class="nav-arrow">›</span>
+                <span class="nav-arrow">&#8250;</span>
             </div>
-            <div class="nav-item" onclick="alert('Sync')">
+            <div class="nav-item" onclick="window.location.href='/enroll'">
                 <div class="nav-item-content">
-                    <span class="nav-icon">☁️</span>
-                    <span class="nav-label">iCloud/Android Sync</span>
+                    <span class="nav-icon">&#128100;</span>
+                    <span class="nav-label">Speaker Enrollment</span>
                 </div>
-                <span class="nav-arrow">›</span>
+                <span class="nav-arrow">&#8250;</span>
             </div>
-            <div class="nav-item" onclick="alert('Export/Import')">
+            <div class="nav-item" onclick="alert('Settings coming soon')">
                 <div class="nav-item-content">
-                    <span class="nav-icon">⬆️</span>
-                    <span class="nav-label">Export/Import</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="window.open('https://support.medjournee.com', '_blank')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">❔</span>
-                    <span class="nav-label">Help Center</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Share')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">❤️</span>
-                    <span class="nav-label">Share</span>
-                </div>
-                <span class="nav-arrow">›</span>
-            </div>
-            <div class="nav-item" onclick="alert('Settings')">
-                <div class="nav-item-content">
-                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-icon">&#9881;</span>
                     <span class="nav-label">Settings</span>
                 </div>
-                <span class="nav-arrow">›</span>
+                <span class="nav-arrow">&#8250;</span>
             </div>
         </div>
     </div>
 
-    <!-- Overlay -->
     <div class="overlay" id="overlay" onclick="toggleDrawer()"></div>
 
-    <!-- Main Content -->
     <div class="main-content">
-        <div class="year-header">2025</div>
-        
-        <div id="loadingIndicator" class="loading">
-            <div class="spinner"></div>
-            <p>Loading your journal entries...</p>
+        <!-- Calendar Section -->
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <div class="calendar-nav">
+                    <button class="calendar-nav-btn" onclick="prevMonth()">&#8249;</button>
+                    <span class="calendar-month-year" id="calendarMonthYear">February 2026</span>
+                    <button class="calendar-nav-btn" onclick="nextMonth()">&#8250;</button>
+                </div>
+                <button class="calendar-today-btn" onclick="goToToday()">Today</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Calendar will be rendered here -->
+            </div>
         </div>
 
-        <div id="entriesContainer" style="display: none;"></div>
+        <!-- Things to Mention Section (Prominent) -->
+        <div class="section things-to-mention-section" id="thingsToMentionSection" style="display: none;">
+            <div class="section-header">
+                <span class="section-title" style="color: #e65100;">Things to Mention</span>
+                <span class="mention-count" id="mentionCount"></span>
+            </div>
+            <div id="thingsToMentionContainer">
+                <!-- Talking points will be rendered here -->
+            </div>
+        </div>
 
-        <div id="emptyState" class="empty-state" style="display: none;">
-            <div class="empty-icon">📋</div>
-            <h3>No Journal Entries Yet</h3>
-            <p style="margin-top: 12px;">Tap the + button below to start your first medical visit</p>
+        <!-- Upcoming Appointments Section -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-title">Upcoming Appointments</span>
+            </div>
+            <div id="upcomingContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading appointments...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Past Appointments Section (Collapsible) -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-title">Past Appointments</span>
+                <button class="section-toggle" id="pastToggle" onclick="toggleSection('past')">&#9660;</button>
+            </div>
+            <div class="section-content" id="pastContent">
+                <div id="pastContainer"></div>
+            </div>
+        </div>
+
+        <!-- Recent Journal Entries Section (Collapsible) -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-title">Recent Journal Entries</span>
+                <button class="section-toggle" id="entriesToggle" onclick="toggleSection('entries')">&#9660;</button>
+            </div>
+            <div class="section-content" id="entriesContent">
+                <div id="entriesContainer"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Floating Action Buttons -->
+    <!-- Day Detail Modal -->
+    <div class="modal-overlay" id="dayModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">February 15, 2026</span>
+                <button class="modal-close" onclick="closeDayModal()">&#10005;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-day-appointments" id="modalAppointments">
+                    <!-- Appointments for selected day -->
+                </div>
+                <button class="modal-add-btn" id="modalAddBtn" onclick="handleModalAction()">
+                    <span>+ New Appointment</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB -->
     <div class="fab-container">
-        <button class="fab fab-secondary" onclick="alert('Calendar view')">📅</button>
-        <button class="fab fab-primary" onclick="startNewEntry()">+</button>
-        <button class="fab fab-secondary" onclick="alert('Profile')">👤</button>
+        <button class="fab fab-secondary" onclick="window.location.href='/static/record.html'">&#127908;</button>
+        <button class="fab fab-primary" onclick="openNewAppointment()">+</button>
+        <button class="fab fab-secondary" onclick="window.location.href='/enroll'">&#128100;</button>
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
-        const USER_ID = 'user-001'; // This would come from login in real app
+        const API_BASE = window.location.origin;
+        const USER_ID = 'user-001';
+        const FAMILY_ID = 'family-001';
 
-        // Navigation Drawer
+        // Calendar state
+        let currentDate = new Date();
+        let selectedDate = null;
+        let appointmentsMap = {}; // date string -> appointments array
+
+        // Initialize
+        window.addEventListener('load', async () => {
+            renderCalendar();
+            await Promise.all([
+                loadMonthAppointments(),
+                loadUpcomingAppointments(),
+                loadThingsToMention(),
+                loadPastAppointments(),
+                loadJournalEntries()
+            ]);
+        });
+
+        // Navigation drawer
         function toggleDrawer() {
             const drawer = document.getElementById('navDrawer');
             const overlay = document.getElementById('overlay');
@@ -495,44 +424,379 @@
             overlay.classList.toggle('show');
         }
 
-        function toggleSort() {
-            alert('Sort: Latest First / Oldest First');
+        // Section toggling
+        function toggleSection(section) {
+            const toggle = document.getElementById(`${section}Toggle`);
+            const content = document.getElementById(`${section}Content`);
+            toggle.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
         }
 
-        function filterEntries(type) {
-            alert(`Filtering by: ${type}`);
-            toggleDrawer();
+        // Calendar rendering
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const monthYear = document.getElementById('calendarMonthYear');
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            // Update header
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            monthYear.textContent = `${monthNames[month]} ${year}`;
+
+            // Clear grid
+            grid.innerHTML = '';
+
+            // Add weekday headers
+            const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            weekdays.forEach(day => {
+                const el = document.createElement('div');
+                el.className = 'calendar-weekday';
+                el.textContent = day;
+                grid.appendChild(el);
+            });
+
+            // Get first day of month and total days
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            // Today's date for comparison
+            const today = new Date();
+            const todayStr = formatDateStr(today);
+
+            // Add previous month's days
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const day = daysInPrevMonth - i;
+                const el = createDayElement(day, true);
+                grid.appendChild(el);
+            }
+
+            // Add current month's days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === todayStr;
+                const isSelected = selectedDate === dateStr;
+                const hasAppointment = appointmentsMap[dateStr] && appointmentsMap[dateStr].length > 0;
+
+                const el = createDayElement(day, false, isToday, isSelected, hasAppointment, dateStr);
+                grid.appendChild(el);
+            }
+
+            // Add next month's days to fill the grid
+            const totalCells = grid.children.length;
+            const remainingCells = 42 - totalCells; // 6 rows x 7 days
+            for (let i = 1; i <= remainingCells && totalCells < 42; i++) {
+                const el = createDayElement(i, true);
+                grid.appendChild(el);
+            }
         }
 
-        // Load journal entries from your FastAPI backend
+        function createDayElement(day, isOtherMonth, isToday = false, isSelected = false, hasAppointment = false, dateStr = null) {
+            const el = document.createElement('div');
+            el.className = 'calendar-day';
+
+            if (isOtherMonth) el.classList.add('other-month');
+            if (isToday) el.classList.add('today');
+            if (isSelected) el.classList.add('selected');
+
+            el.textContent = day;
+
+            if (hasAppointment) {
+                const dot = document.createElement('div');
+                dot.className = 'appointment-dot';
+                // Check if multiple appointments
+                const appointments = appointmentsMap[dateStr] || [];
+                if (appointments.length > 1) {
+                    dot.classList.add('multiple');
+                }
+                el.appendChild(dot);
+            }
+
+            if (!isOtherMonth && dateStr) {
+                el.onclick = () => selectDate(dateStr);
+            }
+
+            return el;
+        }
+
+        function formatDateStr(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        function prevMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+            loadMonthAppointments();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+            loadMonthAppointments();
+        }
+
+        function goToToday() {
+            currentDate = new Date();
+            selectedDate = formatDateStr(currentDate);
+            renderCalendar();
+            loadMonthAppointments();
+        }
+
+        function selectDate(dateStr) {
+            selectedDate = dateStr;
+            renderCalendar();
+            openDayModal(dateStr);
+        }
+
+        // Load appointments for current month
+        async function loadMonthAppointments() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+
+            try {
+                const response = await fetch(`${API_BASE}/appointments/month/${USER_ID}/${year}/${month}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    appointmentsMap = result.dates_with_appointments || {};
+                    renderCalendar();
+                    updateTodayBadge();
+                }
+            } catch (error) {
+                console.error('Failed to load month appointments:', error);
+            }
+        }
+
+        // Load upcoming appointments
+        async function updateTodayBadge() {
+            const today = formatDateStr(new Date());
+            const todayAppointments = appointmentsMap[today] || [];
+            const badge = document.getElementById('todayBadge');
+
+            if (badge) {
+                if (todayAppointments.length > 0) {
+                    badge.textContent = todayAppointments.length;
+                    badge.classList.remove('empty');
+                } else {
+                    badge.classList.add('empty');
+                }
+            }
+        }
+
+        async function loadUpcomingAppointments() {
+            const container = document.getElementById('upcomingContainer');
+
+            try {
+                const response = await fetch(`${API_BASE}/appointments/upcoming/${USER_ID}?limit=5`);
+                const result = await response.json();
+
+                if (result.success && result.appointments.length > 0) {
+                    container.innerHTML = result.appointments.map(appt => createAppointmentCard(appt)).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">&#128197;</div>
+                            <h3>No Upcoming Appointments</h3>
+                            <p>Stay on top of your medical visits</p>
+                            <button onclick="openNewAppointment()" style="margin-top: 12px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
+                                + Schedule Appointment
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load upcoming appointments:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">&#128197;</div>
+                        <h3>No Upcoming Appointments</h3>
+                        <p>Stay on top of your medical visits</p>
+                        <button onclick="openNewAppointment()" style="margin-top: 12px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
+                            + Schedule Appointment
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Load all talking points from upcoming appointments
+        async function loadThingsToMention() {
+            const section = document.getElementById('thingsToMentionSection');
+            const container = document.getElementById('thingsToMentionContainer');
+            const countBadge = document.getElementById('mentionCount');
+
+            try {
+                // Get upcoming appointments with their talking points
+                const response = await fetch(`${API_BASE}/appointments/upcoming/${USER_ID}?limit=10`);
+                const result = await response.json();
+
+                if (!result.success || !result.appointments) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                // Collect all unchecked talking points
+                let allPoints = [];
+
+                for (const appt of result.appointments) {
+                    // Fetch talking points for each appointment
+                    try {
+                        const pointsResponse = await fetch(`${API_BASE}/talking-points/appointment/${appt.id}`);
+                        const pointsResult = await pointsResponse.json();
+
+                        if (pointsResult.success && pointsResult.talking_points) {
+                            const unchecked = pointsResult.talking_points.filter(p => !p.done);
+                            unchecked.forEach(p => {
+                                allPoints.push({
+                                    ...p,
+                                    appointmentTitle: appt.title,
+                                    appointmentDate: appt.scheduled_date,
+                                    appointmentId: appt.id
+                                });
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Failed to load points for appointment:', appt.id);
+                    }
+                }
+
+                if (allPoints.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                // Show section
+                section.style.display = 'block';
+                countBadge.textContent = `${allPoints.length} items`;
+
+                // Render items
+                container.innerHTML = allPoints.map(point => {
+                    const date = new Date(point.appointmentDate + 'T00:00:00');
+                    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                    return `
+                        <div class="mention-item" onclick="openAppointment('${point.appointmentId}')">
+                            <div class="mention-checkbox" onclick="event.stopPropagation(); toggleMentionItem('${point.id}', this)"></div>
+                            <div class="mention-content">
+                                <div class="mention-text">${escapeHtml(point.text)}</div>
+                                <div class="mention-appointment">
+                                    ${dateStr} - ${point.appointmentTitle}
+                                    ${point.priority === 'high' ? '<span class="mention-badge">Important</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Failed to load things to mention:', error);
+                section.style.display = 'none';
+            }
+        }
+
+        async function toggleMentionItem(pointId, element) {
+            try {
+                const response = await fetch(`${API_BASE}/talking-points/${pointId}/toggle`, {
+                    method: 'PUT'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.done) {
+                        element.classList.add('checked');
+                        element.closest('.mention-item').querySelector('.mention-text').classList.add('done');
+                    } else {
+                        element.classList.remove('checked');
+                        element.closest('.mention-item').querySelector('.mention-text').classList.remove('done');
+                    }
+                    // Reload to update count
+                    setTimeout(() => loadThingsToMention(), 500);
+                }
+            } catch (error) {
+                console.error('Failed to toggle item:', error);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load past unlinked appointments
+        async function loadPastAppointments() {
+            const container = document.getElementById('pastContainer');
+
+            try {
+                const response = await fetch(`${API_BASE}/appointments/past-unlinked/${USER_ID}?limit=5`);
+                const result = await response.json();
+
+                if (result.success && result.appointments.length > 0) {
+                    container.innerHTML = result.appointments.map(appt => createAppointmentCard(appt, true)).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>No past appointments without journal entries</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="empty-state"><p>No past appointments</p></div>`;
+            }
+        }
+
+        // Load journal entries
         async function loadJournalEntries() {
+            const container = document.getElementById('entriesContainer');
+
             try {
                 const response = await fetch(`${API_BASE}/live-session/list-journal-entries/${USER_ID}`);
                 const result = await response.json();
 
-                document.getElementById('loadingIndicator').style.display = 'none';
-
                 if (result.success && result.journal_entries && result.journal_entries.length > 0) {
-                    displayEntries(result.journal_entries);
+                    container.innerHTML = result.journal_entries.slice(0, 5).map(entry => createEntryCard(entry)).join('');
                 } else {
-                    document.getElementById('emptyState').style.display = 'block';
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">&#127908;</div>
+                            <h3>No Journal Entries Yet</h3>
+                            <p>Record a medical visit to keep track of important information</p>
+                            <button onclick="window.location.href='/static/record.html'" style="margin-top: 12px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
+                                Start Recording
+                            </button>
+                        </div>
+                    `;
                 }
             } catch (error) {
-                console.error('Failed to load entries:', error);
-                document.getElementById('loadingIndicator').innerHTML = 
-                    '<p style="color: #f44336;">⚠️ Could not connect to server<br>Make sure FastAPI is running on localhost:8000</p>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">&#127908;</div>
+                        <h3>No Journal Entries Yet</h3>
+                        <p>Record a medical visit to keep track of important information</p>
+                        <button onclick="window.location.href='/static/record.html'" style="margin-top: 12px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
+                            Start Recording
+                        </button>
+                    </div>
+                `;
             }
         }
 
-        function displayEntries(entries) {
-            const container = document.getElementById('entriesContainer');
-            container.style.display = 'block';
-            container.innerHTML = '';
+        function createAppointmentCard(appt, isPast = false) {
+            const date = new Date(appt.scheduled_date + 'T00:00:00');
+            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const timeStr = appt.scheduled_time ? formatTime(appt.scheduled_time) : 'All day';
+            const pointsCount = appt.talking_points_count || 0;
 
-            entries.forEach(entry => {
-                const card = createEntryCard(entry);
-                container.appendChild(card);
-            });
+            return `
+                <div class="appointment-card ${isPast ? 'past' : ''}" onclick="openAppointment('${appt.id}')">
+                    <div class="appointment-date">${dateStr} ${appt.scheduled_time ? '&#8226; ' + timeStr : ''}</div>
+                    <div class="appointment-title">${appt.title}</div>
+                    ${appt.provider_name ? `<div class="appointment-provider">${appt.provider_name}</div>` : ''}
+                    ${pointsCount > 0 ? `<div class="appointment-points">${pointsCount} talking point${pointsCount > 1 ? 's' : ''}</div>` : ''}
+                </div>
+            `;
         }
 
         function createEntryCard(entry) {
@@ -540,52 +804,128 @@
             const day = date.getDate().toString().padStart(2, '0');
             const month = date.toLocaleString('en', { month: 'short' });
 
-            const card = document.createElement('div');
-            card.className = 'entry-card visit';
-            card.onclick = () => openFullEntry(entry.session_id);
-
-            card.innerHTML = `
-                <div class="entry-header">
-                    <div class="entry-date">
-                        <div class="entry-day">${day}</div>
-                        <div class="entry-month">${month}</div>
+            return `
+                <div class="entry-card" onclick="openFullEntry('${entry.session_id}')">
+                    <div class="entry-header">
+                        <div class="entry-date">
+                            <div class="entry-day">${day}</div>
+                            <div class="entry-month">${month}</div>
+                        </div>
                     </div>
-                    <div class="entry-emoji">😊</div>
+                    <div class="entry-title">${entry.visit_type || 'Medical Visit'} - ${entry.provider || 'Healthcare Provider'}</div>
+                    <div class="entry-summary">${entry.summary || 'Medical visit completed.'}</div>
                 </div>
-                <div class="entry-title">${entry.visit_type || 'Medical Visit'} - ${entry.provider || 'Healthcare Provider'}</div>
-                <div class="entry-summary">${entry.summary || 'Medical visit completed.'}</div>
             `;
+        }
 
-            return card;
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            const [hours, minutes] = timeStr.split(':');
+            const h = parseInt(hours);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+        }
+
+        // Day modal
+        function openDayModal(dateStr) {
+            const modal = document.getElementById('dayModal');
+            const title = document.getElementById('modalTitle');
+            const appointmentsDiv = document.getElementById('modalAppointments');
+            const addBtn = document.getElementById('modalAddBtn');
+
+            const date = new Date(dateStr + 'T00:00:00');
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            title.textContent = date.toLocaleDateString('en-US', options);
+
+            const appointments = appointmentsMap[dateStr] || [];
+
+            if (appointments.length > 0) {
+                appointmentsDiv.innerHTML = appointments.map(appt => `
+                    <div class="modal-appointment" onclick="openAppointment('${appt.id}')">
+                        ${appt.time ? `<div class="modal-appointment-time">${formatTime(appt.time)}</div>` : ''}
+                        <div class="modal-appointment-title">${appt.title}</div>
+                        ${appt.provider ? `<div class="modal-appointment-provider">${appt.provider}</div>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                appointmentsDiv.innerHTML = `
+                    <div class="empty-state">
+                        <p>No appointments on this day</p>
+                    </div>
+                `;
+            }
+
+            // Check if date is today or in the future
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selectedDay = new Date(dateStr + 'T00:00:00');
+
+            if (selectedDay.getTime() === today.getTime()) {
+                // Today: show both options
+                addBtn.innerHTML = '<span>+ New Appointment</span>';
+                addBtn.className = 'modal-add-btn';
+                addBtn.onclick = () => openNewAppointment(dateStr);
+            } else if (selectedDay > today) {
+                // Future: add appointment
+                addBtn.innerHTML = '<span>+ New Appointment</span>';
+                addBtn.className = 'modal-add-btn';
+                addBtn.onclick = () => openNewAppointment(dateStr);
+            } else {
+                // Past: different behavior
+                addBtn.innerHTML = '<span>+ Add Past Appointment</span>';
+                addBtn.className = 'modal-add-btn';
+                addBtn.onclick = () => openNewAppointment(dateStr);
+            }
+
+            modal.classList.add('show');
+        }
+
+        function closeDayModal() {
+            document.getElementById('dayModal').classList.remove('show');
+        }
+
+        function handleModalAction() {
+            // This will be replaced by the button's onclick handler
+        }
+
+        // Navigation functions
+        function openAppointment(appointmentId) {
+            window.location.href = `/static/appointment.html?id=${appointmentId}`;
+        }
+
+        function openNewAppointment(dateStr = null) {
+            const url = dateStr
+                ? `/static/appointment.html?date=${dateStr}`
+                : '/static/appointment.html';
+            window.location.href = url;
         }
 
         function openFullEntry(sessionId) {
-            // Navigate to full entry view (we'll build this next)
-            alert(`Opening full entry for session: ${sessionId}\n\nThis will show the detailed view with all medical information.`);
-            
-            // In real app, this would navigate to full entry page
-            // window.location.href = `entry.html?session=${sessionId}`;
+            window.location.href = `/static/entry.html?session=${sessionId}`;
         }
 
-        function startNewEntry() {
-            if (confirm('Start a new medical visit recording?\n\nThis will open the live translation interface.')) {
-                // Navigate to recording interface
-                alert('Opening live translation interface...\n\nThis would connect to your enhanced-live-diarize endpoint.');
-                
-                // In real app: window.location.href = 'record.html';
-            }
+        function showAllAppointments() {
+            alert('All appointments view coming soon');
+            toggleDrawer();
         }
 
-        // Load entries when page loads
-        window.addEventListener('load', loadJournalEntries);
+        function filterEntries(type) {
+            alert(`Filtering by: ${type}`);
+            toggleDrawer();
+        }
 
-        // Prevent pull-to-refresh on mobile
-        document.body.addEventListener('touchmove', function(e) {
-            if (e.target.closest('.main-content')) {
-                return;
+        // Close modal on outside click
+        document.getElementById('dayModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeDayModal();
             }
-            e.preventDefault();
-        }, { passive: false });
+        });
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
     </script>
 </body>
 </html>

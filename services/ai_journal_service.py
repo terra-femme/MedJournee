@@ -19,6 +19,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from services.medical_terms_service import medical_terms_service, enrich_with_medical_terms
 import re
 from dotenv import load_dotenv
 
@@ -68,6 +69,7 @@ class AIJournalService:
         patient_info: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
+        Enhanced version with automatic medical term detection and explanation
         Main function: Convert speaker-differentiated conversation into structured journal entry
         
         Args:
@@ -104,11 +106,14 @@ class AIJournalService:
                 "processing_method": "ai_medical_summarization"
             }
             
+            journal_entry = await enrich_with_medical_terms(journal_entry)
+            confidence_score = self._calculate_confidence(medical_summary)
+
             return {
                 "success": True,
                 "journal_entry": journal_entry,
-                "medical_summary": medical_summary,
-                "confidence_score": self._calculate_confidence(medical_summary)
+                "confidence_score": confidence_score,
+                "medical_terms_detected": journal_entry.get("medical_terms_count", 0)
             }
             
         except Exception as e:
@@ -384,30 +389,6 @@ Only include information that was actually mentioned in the conversation.
             "medical_terms_explained": explained_terms,
             "summary": self._generate_visit_summary(medical_summary)
         }
-    
-    def _generate_family_summary(self, medical_summary: MedicalSummary) -> str:
-        """Generate a family-friendly summary of the visit"""
-        
-        summary_parts = []
-        
-        if medical_summary.chief_complaint:
-            summary_parts.append(f"Visit was for: {medical_summary.chief_complaint}")
-        
-        if medical_summary.diagnoses:
-            summary_parts.append(f"Doctor discussed: {', '.join(medical_summary.diagnoses)}")
-        
-        if medical_summary.treatments_prescribed:
-            summary_parts.append(f"Recommended treatments: {', '.join(medical_summary.treatments_prescribed)}")
-        
-        if medical_summary.medications:
-            med_names = [med.get("name", "") for med in medical_summary.medications if med.get("name")]
-            if med_names:
-                summary_parts.append(f"New medications: {', '.join(med_names)}")
-        
-        if medical_summary.follow_up_instructions:
-            summary_parts.append(f"Important follow-up: {'; '.join(medical_summary.follow_up_instructions)}")
-        
-        return ". ".join(summary_parts) if summary_parts else "Medical visit completed."
     
     def _generate_family_summary(self, medical_summary: MedicalSummary) -> str:
         """Generate a detailed narrative family-friendly summary of the visit"""

@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
+    <title>MedJournee - Appointment</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <style>
+        /* Appointment page-specific styles */
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            color: var(--text-secondary);
+        }
+
+        .header-btn.delete {
+            color: var(--sunset-coral);
+        }
+
+        /* Drag and drop states */
+        .talking-point-item {
+            cursor: grab;
+        }
+
+        .talking-point-item:active {
+            cursor: grabbing;
+        }
+
+        .talking-point-item.dragging {
+            opacity: 0.5;
+            background: rgba(74, 144, 226, 0.15);
+            border-color: var(--sunset-blue);
+        }
+
+        .talking-point-item.drag-over {
+            border-color: var(--color-success);
+            background: rgba(76, 175, 80, 0.15);
+        }
+
+        .drag-handle {
+            color: var(--text-muted);
+            font-size: 16px;
+            cursor: grab;
+            padding: 4px;
+            margin-right: -4px;
+            user-select: none;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* Linked Entry */
+        .linked-entry {
+            background: rgba(179, 136, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-top: 12px;
+            border: 1px solid rgba(179, 136, 255, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .linked-entry:hover {
+            background: rgba(179, 136, 255, 0.18);
+        }
+
+        .linked-entry-label {
+            font-size: 12px;
+            color: var(--color-purple);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .linked-entry-title {
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+
+        .linked-entry-date {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .linked-entry-date a {
+            color: var(--color-purple);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">&#8249;</button>
+        <div class="header-title" id="headerTitle">New Appointment</div>
+        <div class="header-actions">
+            <button class="header-btn delete" id="deleteBtn" onclick="deleteAppointment()" style="display: none;">&#128465;</button>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="loading" id="loadingState">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <!-- Form will be rendered here -->
+        <div id="appointmentForm" style="display: none;">
+            <!-- Appointment Details Section -->
+            <div class="form-section">
+                <div class="form-section-title">Appointment Details</div>
+
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-input" id="titleInput" placeholder="e.g., Cardiology Checkup (optional)">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Date *</label>
+                        <input type="date" class="form-input" id="dateInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Time</label>
+                        <input type="time" class="form-input" id="timeInput">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Provider Name</label>
+                    <input type="text" class="form-input" id="providerInput" placeholder="e.g., Dr. Smith">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-input" id="locationInput" placeholder="e.g., Main Hospital">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Appointment Type</label>
+                    <select class="form-input" id="typeSelect">
+                        <option value="">Select type...</option>
+                        <option value="checkup">Checkup</option>
+                        <option value="follow-up">Follow-up</option>
+                        <option value="lab">Lab Work</option>
+                        <option value="imaging">Imaging</option>
+                        <option value="specialist">Specialist Visit</option>
+                    </select>
+                </div>
+
+                <div id="statusContainer" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <span class="status-badge scheduled" id="statusBadge">Scheduled</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Talking Points Section -->
+            <!-- Talking Points Section - Always visible -->
+            <div class="form-section" id="talkingPointsSection">
+                <div class="form-section-title">Talking Points</div>
+
+                <div class="talking-points-list" id="talkingPointsList">
+                    <!-- Points will be rendered here -->
+                </div>
+
+                <div class="add-point-container">
+                    <input type="text" class="add-point-input" id="newPointInput" placeholder="Add a talking point...">
+                    <button class="add-point-btn" onclick="addTalkingPoint()">Add</button>
+                </div>
+
+                <div class="add-point-options">
+                    <span class="option-chip selected" data-category="general" onclick="selectCategory('general')">General</span>
+                    <span class="option-chip" data-category="medication" onclick="selectCategory('medication')">Medication</span>
+                    <span class="option-chip" data-category="symptoms" onclick="selectCategory('symptoms')">Symptoms</span>
+                    <span class="option-chip" data-category="results" onclick="selectCategory('results')">Results</span>
+                    <span class="option-chip" data-category="questions" onclick="selectCategory('questions')">Questions</span>
+                </div>
+
+                <div class="add-point-options" style="margin-top: 4px;">
+                    <span style="font-size: 12px; color: #666; margin-right: 4px;">Priority:</span>
+                    <span class="option-chip" data-priority="high" onclick="selectPriority('high')">High</span>
+                    <span class="option-chip selected" data-priority="medium" onclick="selectPriority('medium')">Medium</span>
+                    <span class="option-chip" data-priority="low" onclick="selectPriority('low')">Low</span>
+                </div>
+            </div>
+
+            <!-- Linked Entry Section (for existing appointments) -->
+            <div class="form-section" id="linkedSection" style="display: none;">
+                <div class="form-section-title">Linked Journal Entry</div>
+                <div id="linkedContent">
+                    <!-- Will show linked entry or link button -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons" id="actionButtons" style="display: none;">
+        <button class="action-btn secondary" onclick="goBack()">Cancel</button>
+        <button class="action-btn primary" id="saveBtn" onclick="saveAppointment()">Save</button>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const USER_ID = 'user-001';
+        const FAMILY_ID = 'family-001';
+
+        // State
+        let appointmentId = null;
+        let appointment = null;
+        let talkingPoints = [];
+        let pendingTalkingPoints = []; // Points added before appointment is saved
+        let selectedCategory = 'general';
+        let selectedPriority = 'medium';
+        let isNewAppointment = true;
+        let tempIdCounter = 0; // For generating temporary IDs
+
+        // Initialize
+        window.addEventListener('load', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            appointmentId = urlParams.get('id');
+            const presetDate = urlParams.get('date');
+
+            if (appointmentId) {
+                // Load existing appointment
+                isNewAppointment = false;
+                await loadAppointment();
+            } else {
+                // New appointment
+                isNewAppointment = true;
+                showForm();
+
+                // Set preset date if provided
+                if (presetDate) {
+                    document.getElementById('dateInput').value = presetDate;
+                } else {
+                    // Default to today
+                    document.getElementById('dateInput').value = formatDateForInput(new Date());
+                }
+            }
+        });
+
+        function formatDateForInput(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        async function loadAppointment() {
+            try {
+                const response = await fetch(`${API_BASE}/appointments/${appointmentId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    appointment = result.appointment;
+                    talkingPoints = appointment.talking_points || [];
+                    populateForm();
+                    showForm();
+                } else {
+                    alert('Appointment not found');
+                    goBack();
+                }
+            } catch (error) {
+                console.error('Failed to load appointment:', error);
+                alert('Failed to load appointment');
+                goBack();
+            }
+        }
+
+        function populateForm() {
+            document.getElementById('headerTitle').textContent = appointment.title;
+            document.getElementById('deleteBtn').style.display = 'block';
+
+            document.getElementById('titleInput').value = appointment.title || '';
+            document.getElementById('dateInput').value = appointment.scheduled_date || '';
+            document.getElementById('timeInput').value = appointment.scheduled_time || '';
+            document.getElementById('providerInput').value = appointment.provider_name || '';
+            document.getElementById('locationInput').value = appointment.location || '';
+            document.getElementById('typeSelect').value = appointment.appointment_type || '';
+
+            // Show status
+            document.getElementById('statusContainer').style.display = 'block';
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1);
+            statusBadge.className = `status-badge ${appointment.status}`;
+
+            // Show talking points section
+            document.getElementById('talkingPointsSection').style.display = 'block';
+            renderTalkingPoints();
+
+            // Show linked section
+            document.getElementById('linkedSection').style.display = 'block';
+            renderLinkedEntry();
+
+            // Update save button
+            document.getElementById('saveBtn').textContent = 'Update';
+        }
+
+        function showForm() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('appointmentForm').style.display = 'block';
+            document.getElementById('actionButtons').style.display = 'flex';
+
+            // Show talking points section immediately for new appointments
+            if (isNewAppointment) {
+                document.getElementById('linkedSection').style.display = 'none';
+                renderTalkingPoints(); // Show empty state with add functionality
+            }
+        }
+
+        function renderTalkingPoints() {
+            const list = document.getElementById('talkingPointsList');
+
+            // Combine saved and pending points
+            const allPoints = [...talkingPoints, ...pendingTalkingPoints];
+
+            if (allPoints.length === 0) {
+                const message = isNewAppointment && !appointmentId
+                    ? 'Add things you want to discuss during this visit. They\'ll be saved with the appointment.'
+                    : 'No talking points yet. Add items to discuss during your visit.';
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>${message}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = allPoints.map(point => `
+                <div class="talking-point-item ${point.isPending ? 'pending' : ''}" data-id="${point.id}" draggable="${!point.isPending}">
+                    <span class="drag-handle" style="${point.isPending ? 'opacity: 0.3;' : ''}">&#9776;</span>
+                    <div class="talking-point-checkbox ${point.done ? 'checked' : ''}" onclick="togglePoint('${point.id}')"></div>
+                    <div class="talking-point-content">
+                        <div class="talking-point-text ${point.done ? 'done' : ''}">${escapeHtml(point.text)}</div>
+                        <div class="talking-point-meta">
+                            ${point.category !== 'general' ? `<span class="talking-point-badge ${point.category}">${point.category}</span>` : ''}
+                            ${point.priority === 'high' ? `<span class="talking-point-badge high">High Priority</span>` : ''}
+                            ${point.priority === 'low' ? `<span class="talking-point-badge low">Low Priority</span>` : ''}
+                            ${point.isPending ? '<span class="talking-point-badge" style="background: #fff8e1; color: #f57f17;">Unsaved</span>' : ''}
+                        </div>
+                    </div>
+                    <button class="talking-point-delete" onclick="deletePoint('${point.id}')">&#10005;</button>
+                </div>
+            `).join('');
+
+            // Add drag and drop listeners (only for saved points)
+            initDragAndDrop();
+        }
+
+        // Drag and drop functionality
+        let draggedItem = null;
+
+        function initDragAndDrop() {
+            const items = document.querySelectorAll('.talking-point-item[draggable]');
+
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragleave', handleDragLeave);
+
+                // Touch support for mobile
+                item.addEventListener('touchstart', handleTouchStart, { passive: false });
+                item.addEventListener('touchmove', handleTouchMove, { passive: false });
+                item.addEventListener('touchend', handleTouchEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.id);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.talking-point-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedItem = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (this !== draggedItem) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (this === draggedItem) return;
+
+            const draggedId = draggedItem.dataset.id;
+            const targetId = this.dataset.id;
+
+            // Reorder in local array
+            const draggedIndex = talkingPoints.findIndex(p => p.id === draggedId);
+            const targetIndex = talkingPoints.findIndex(p => p.id === targetId);
+
+            if (draggedIndex === -1 || targetIndex === -1) return;
+
+            // Move item in array
+            const [removed] = talkingPoints.splice(draggedIndex, 1);
+            talkingPoints.splice(targetIndex, 0, removed);
+
+            // Re-render
+            renderTalkingPoints();
+
+            // Save new order to server
+            await savePointsOrder();
+        }
+
+        async function savePointsOrder() {
+            const pointIds = talkingPoints.map(p => p.id);
+
+            try {
+                await fetch(`${API_BASE}/talking-points/reorder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        appointment_id: appointmentId,
+                        point_ids: pointIds
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to save order:', error);
+            }
+        }
+
+        // Touch drag support for mobile
+        let touchStartY = 0;
+        let touchedItem = null;
+
+        function handleTouchStart(e) {
+            if (e.target.classList.contains('drag-handle')) {
+                touchedItem = this;
+                touchStartY = e.touches[0].clientY;
+                this.classList.add('dragging');
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (!touchedItem) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow?.closest('.talking-point-item');
+
+            document.querySelectorAll('.talking-point-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+
+            if (targetItem && targetItem !== touchedItem) {
+                targetItem.classList.add('drag-over');
+            }
+        }
+
+        async function handleTouchEnd(e) {
+            if (!touchedItem) return;
+
+            touchedItem.classList.remove('dragging');
+
+            const touch = e.changedTouches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow?.closest('.talking-point-item');
+
+            if (targetItem && targetItem !== touchedItem) {
+                const draggedId = touchedItem.dataset.id;
+                const targetId = targetItem.dataset.id;
+
+                const draggedIndex = talkingPoints.findIndex(p => p.id === draggedId);
+                const targetIndex = talkingPoints.findIndex(p => p.id === targetId);
+
+                if (draggedIndex !== -1 && targetIndex !== -1) {
+                    const [removed] = talkingPoints.splice(draggedIndex, 1);
+                    talkingPoints.splice(targetIndex, 0, removed);
+                    renderTalkingPoints();
+                    await savePointsOrder();
+                }
+            }
+
+            document.querySelectorAll('.talking-point-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+
+            touchedItem = null;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderLinkedEntry() {
+            const content = document.getElementById('linkedContent');
+
+            if (appointment.linked_entry_id) {
+                content.innerHTML = `
+                    <div class="linked-entry">
+                        <div class="linked-entry-label">Journal Entry Linked</div>
+                        <div class="linked-entry-title">Visit on ${formatDisplayDate(appointment.linked_at)}</div>
+                        <div class="linked-entry-date">
+                            <a href="/static/entry.html?entry=${appointment.linked_entry_id}" style="color: #7B1FA2;">View Entry</a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Check if appointment is past
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const apptDate = new Date(appointment.scheduled_date + 'T00:00:00');
+
+                if (apptDate <= today) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <p>No journal entry linked yet.</p>
+                            <button class="action-btn record" style="margin-top: 12px; width: auto; padding: 10px 20px;" onclick="startRecording()">
+                                Start Recording
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <p>Journal entry can be linked after the appointment.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function selectCategory(category) {
+            selectedCategory = category;
+            document.querySelectorAll('.option-chip[data-category]').forEach(chip => {
+                chip.classList.toggle('selected', chip.dataset.category === category);
+            });
+        }
+
+        function selectPriority(priority) {
+            selectedPriority = priority;
+            document.querySelectorAll('.option-chip[data-priority]').forEach(chip => {
+                chip.classList.toggle('selected', chip.dataset.priority === priority);
+            });
+        }
+
+        async function addTalkingPoint() {
+            const input = document.getElementById('newPointInput');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            // If appointment not saved yet, store locally
+            if (!appointmentId) {
+                tempIdCounter++;
+                const pendingPoint = {
+                    id: `temp-${tempIdCounter}`,
+                    text: text,
+                    category: selectedCategory,
+                    priority: selectedPriority,
+                    done: false,
+                    isPending: true // Mark as not yet saved
+                };
+                pendingTalkingPoints.push(pendingPoint);
+                renderTalkingPoints();
+                input.value = '';
+                selectCategory('general');
+                selectPriority('medium');
+                return;
+            }
+
+            // Appointment exists, save to server
+            try {
+                const formData = new FormData();
+                formData.append('appointment_id', appointmentId);
+                formData.append('text', text);
+                formData.append('category', selectedCategory);
+                formData.append('priority', selectedPriority);
+
+                const response = await fetch(`${API_BASE}/talking-points/create`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    talkingPoints.push(result.talking_point);
+                    renderTalkingPoints();
+                    input.value = '';
+                    // Reset to defaults
+                    selectCategory('general');
+                    selectPriority('medium');
+                }
+            } catch (error) {
+                console.error('Failed to add talking point:', error);
+                alert('Failed to add talking point');
+            }
+        }
+
+        async function togglePoint(pointId) {
+            // Check if it's a pending (unsaved) point
+            if (pointId.startsWith('temp-')) {
+                const point = pendingTalkingPoints.find(p => p.id === pointId);
+                if (point) {
+                    point.done = !point.done;
+                    renderTalkingPoints();
+                }
+                return;
+            }
+
+            // Saved point - toggle on server
+            try {
+                const response = await fetch(`${API_BASE}/talking-points/${pointId}/toggle`, {
+                    method: 'PUT'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const point = talkingPoints.find(p => p.id === pointId);
+                    if (point) {
+                        point.done = result.done;
+                        renderTalkingPoints();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to toggle point:', error);
+            }
+        }
+
+        async function deletePoint(pointId) {
+            if (!confirm('Delete this talking point?')) return;
+
+            // Check if it's a pending (unsaved) point
+            if (pointId.startsWith('temp-')) {
+                pendingTalkingPoints = pendingTalkingPoints.filter(p => p.id !== pointId);
+                renderTalkingPoints();
+                return;
+            }
+
+            // Saved point - delete from server
+            try {
+                const response = await fetch(`${API_BASE}/talking-points/${pointId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    talkingPoints = talkingPoints.filter(p => p.id !== pointId);
+                    renderTalkingPoints();
+                }
+            } catch (error) {
+                console.error('Failed to delete point:', error);
+            }
+        }
+
+        async function saveAppointment() {
+            const title = document.getElementById('titleInput').value.trim();
+            const date = document.getElementById('dateInput').value;
+            const time = document.getElementById('timeInput').value;
+            const provider = document.getElementById('providerInput').value.trim();
+            const location = document.getElementById('locationInput').value.trim();
+            const type = document.getElementById('typeSelect').value;
+
+            if (!date) {
+                alert('Date is required');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('scheduled_date', date);
+            if (title) formData.append('title', title);
+            if (time) formData.append('scheduled_time', time);
+            if (provider) formData.append('provider_name', provider);
+            if (location) formData.append('location', location);
+            if (type) formData.append('appointment_type', type);
+
+            try {
+                let response;
+
+                if (isNewAppointment) {
+                    formData.append('user_id', USER_ID);
+                    formData.append('family_id', FAMILY_ID);
+
+                    response = await fetch(`${API_BASE}/appointments/create`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    response = await fetch(`${API_BASE}/appointments/${appointmentId}`, {
+                        method: 'PUT',
+                        body: formData
+                    });
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (isNewAppointment) {
+                        // Store the new appointment ID
+                        appointmentId = result.appointment.id;
+                        appointment = result.appointment;
+                        isNewAppointment = false;
+
+                        // Save any pending talking points
+                        if (pendingTalkingPoints.length > 0) {
+                            await savePendingTalkingPoints();
+                        }
+
+                        // Update UI to show talking points section
+                        document.getElementById('headerTitle').textContent = appointment.title;
+                        document.getElementById('deleteBtn').style.display = 'block';
+                        document.getElementById('statusContainer').style.display = 'block';
+                        document.getElementById('talkingPointsSection').style.display = 'block';
+                        document.getElementById('linkedSection').style.display = 'block';
+                        document.getElementById('saveBtn').textContent = 'Update';
+
+                        renderTalkingPoints();
+                        renderLinkedEntry();
+
+                        // Update URL without reload
+                        window.history.replaceState({}, '', `/static/appointment.html?id=${appointmentId}`);
+                    } else {
+                        goBack();
+                    }
+                } else {
+                    alert('Failed to save appointment');
+                }
+            } catch (error) {
+                console.error('Failed to save appointment:', error);
+                alert('Failed to save appointment');
+            }
+        }
+
+        async function savePendingTalkingPoints() {
+            // Save each pending talking point to the server
+            for (const point of pendingTalkingPoints) {
+                try {
+                    const formData = new FormData();
+                    formData.append('appointment_id', appointmentId);
+                    formData.append('text', point.text);
+                    formData.append('category', point.category);
+                    formData.append('priority', point.priority);
+
+                    const response = await fetch(`${API_BASE}/talking-points/create`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Add the saved point (with real ID) to talkingPoints
+                        const savedPoint = result.talking_point;
+                        // Preserve the done state if user toggled it before saving
+                        if (point.done) {
+                            await fetch(`${API_BASE}/talking-points/${savedPoint.id}/toggle`, {
+                                method: 'PUT'
+                            });
+                            savedPoint.done = true;
+                        }
+                        talkingPoints.push(savedPoint);
+                    }
+                } catch (error) {
+                    console.error('Failed to save pending talking point:', error);
+                }
+            }
+
+            // Clear pending points
+            pendingTalkingPoints = [];
+        }
+
+        async function deleteAppointment() {
+            if (!confirm('Delete this appointment? This will also delete all talking points.')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/appointments/${appointmentId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    goBack();
+                } else {
+                    alert('Failed to delete appointment');
+                }
+            } catch (error) {
+                console.error('Failed to delete appointment:', error);
+                alert('Failed to delete appointment');
+            }
+        }
+
+        function startRecording() {
+            // Pass appointment info to record page
+            window.location.href = `/static/record.html?appointment=${appointmentId}`;
+        }
+
+        function goBack() {
+            if (document.referrer && document.referrer.includes(window.location.host)) {
+                window.history.back();
+            } else {
+                window.location.href = '/static/mobile.html';
+            }
+        }
+
+        // Handle enter key in new point input
+        document.getElementById('newPointInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTalkingPoint();
+            }
+        });
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
+</body>
+</html>

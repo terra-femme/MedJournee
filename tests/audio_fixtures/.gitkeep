@@ -1,0 +1,8 @@
+# Audio Test Fixtures Directory
+#
+# Place your test audio files here (.webm, .wav, .mp3, .m4a)
+#
+# To record a new fixture:
+#   python tests/test_pipeline.py --record my_test_name --duration 15
+#
+# Or manually add files and update tests/expected_outputs/fixtures.json

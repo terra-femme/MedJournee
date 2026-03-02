@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-02-05T11:28:12.002059",
+  "total_tests": 1,
+  "passed_tests": 1,
+  "failed_tests": 0,
+  "overall_score": 1.0,
+  "duration_ms": 5084.843397140503,
+  "results": [
+    {
+      "fixture_name": "english_medical_sample",
+      "passed": true,
+      "score": 1.0,
+      "transcription_text": "I am speaking clearly so my voice can be recognized. Quick yellow zebras quietly  walk by the ocean. Unique voices echo across wide warm valleys. I enjoy reading,  writing, music, and everyday conversations. This is my natural speaking voice.",
+      "expected_transcript": "I am speaking clearly so my voice can be recognized. Quick yellow zebras quietly walk by the ocean. Unique voices echo across wide, warm valleys. I enjoy reading, writing, music, and everyday conversations. This is my natural speaking voice.",
+      "detected_language": "english",
+      "confidence": 0.9999999999999999,
+      "was_filtered": false,
+      "filter_reason": null,
+      "word_error_rate": 0.0,
+      "wer_passed": true,
+      "language_match": true,
+      "keywords_found": [
+        "speaking",
+        "clearly",
+        "voice",
+        "recognized",
+        "zebras",
+        "ocean",
+        "valleys",
+        "reading",
+        "writing",
+        "music",
+        "conversations",
+        "natural"
+      ],
+      "keywords_missing": [],
+      "hallucinations_detected": [],
+      "speaker_count": 0,
+      "segments": [],
+      "processing_time_ms": 5082.525968551636,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}
