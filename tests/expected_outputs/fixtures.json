@@ -1,0 +1,66 @@
+{
+  "_comment": "Audio test fixtures for MedJournee pipeline testing",
+  "_instructions": "Add your audio files to tests/audio_fixtures/ and register them here",
+
+  "fixtures": {
+    "english_medical_sample": {
+      "audio_file": "voice_sample.wav",
+      "description": "English voice sample for transcription accuracy testing",
+      "expected_language": "en",
+      "expected_transcript": "I am speaking clearly so my voice can be recognized. Quick yellow zebras quietly walk by the ocean. Unique voices echo across wide, warm valleys. I enjoy reading, writing, music, and everyday conversations. This is my natural speaking voice.",
+      "expected_text_contains": ["speaking", "clearly", "voice", "recognized", "zebras", "ocean", "valleys", "reading", "writing", "music", "conversations", "natural"],
+      "expected_text_not_contains": ["subscribe", "like", "channel", "video"],
+      "min_confidence": 0.7,
+      "max_wer": 0.3,
+      "expected_speaker_count": 1,
+      "category": "transcription"
+    },
+
+    "vietnamese_basic_sample": {
+      "audio_file": "vietnamese_basic.webm",
+      "description": "Vietnamese speech sample for language detection",
+      "expected_language": "vi",
+      "expected_transcript": "",
+      "expected_text_contains": [],
+      "expected_text_not_contains": ["subscribe", "dang ky", "kenh"],
+      "min_confidence": 0.6,
+      "expected_speaker_count": 1,
+      "category": "transcription"
+    },
+
+    "mixed_language_conversation": {
+      "audio_file": "mixed_language.webm",
+      "description": "English and Vietnamese mixed conversation for diarization",
+      "expected_languages": ["en", "vi"],
+      "expected_speaker_count": 2,
+      "expected_roles": ["Healthcare Provider", "Patient/Family"],
+      "min_confidence": 0.5,
+      "category": "diarization"
+    },
+
+    "silence_test": {
+      "audio_file": "silence.webm",
+      "description": "Silent audio - should return empty transcription",
+      "expected_language": "unknown",
+      "expected_text_contains": [],
+      "expect_empty": true,
+      "category": "edge_case"
+    },
+
+    "hallucination_prone": {
+      "audio_file": "hallucination_prone.webm",
+      "description": "Quiet/noisy audio that often triggers hallucinations",
+      "expected_language": "en",
+      "expected_text_not_contains": ["subscribe", "like", "channel", "thank you for watching"],
+      "min_confidence": 0.5,
+      "category": "hallucination"
+    }
+  },
+
+  "test_suites": {
+    "basic": ["english_medical_sample", "silence_test"],
+    "full": ["english_medical_sample", "vietnamese_basic_sample", "mixed_language_conversation", "silence_test", "hallucination_prone"],
+    "hallucination": ["hallucination_prone", "silence_test"],
+    "diarization": ["mixed_language_conversation"]
+  }
+}

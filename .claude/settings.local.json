@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"D:\\\\portfolio\\\\medjournee\\\\awesome-claude\"\" && echo \"---\" && ls -la \"D:portfoliomedjourneeawesome-claudemedjournee_full_v2\"\")",
+      "Bash(wc:*)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}

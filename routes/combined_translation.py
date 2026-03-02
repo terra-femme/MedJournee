@@ -1,15 +1,28 @@
 # routes/combined_translation.py
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import (
+    APIRouter,
+    UploadFile,
+    File,
+    HTTPException,
+    Form,
+    Request,
+    BackgroundTasks,
+    Query,
+)
+
+from typing import Optional, List, Dict
+import os
+
 from services.whisper_service import transcribe_audio
 from services.translation_service import translate_text
 from services.cloud_speaker_service import cloud_speaker_service
-from typing import Optional, List, Dict
-import os
-from services.voice_enrollment_service import enroll_voice_endpoint, enhanced_speaker_processing
+from services.voice_enrollment_service import (
+    enroll_voice_endpoint,
+    enhanced_speaker_processing,
+)
 from services.ai_journal_service import ai_journal_service
-from fastapi import BackgroundTasks
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Request
 from services.database_service import database_service
+from services.medical_terms_service import medical_terms_service
 
 
 router = APIRouter()
@@ -435,8 +448,9 @@ async def enhanced_live_diarize(
             
             print(f"Processing segment - Original speaker: {segment.get('speaker')}, Enrollment confidence: {enrollment_confidence}")
             
-            # PRIORITY RULE: If enrolled voice detected with confidence >= 0.70, assign to SPEAKER_2
-            if enrollment_confidence >= 0.70:
+            # PRIORITY RULE: If enrolled voice detected with confidence >= 0.65, assign to SPEAKER_2
+            # Lowered from 0.70 to match voice enrollment threshold
+            if enrollment_confidence >= 0.65:
                 segment["speaker"] = "SPEAKER_2"  # Patient/Family GREEN color
                 segment["speaker_role"] = "Patient/Family" 
                 segment["enrolled_speaker"] = enrolled_name
@@ -665,3 +679,41 @@ async def quick_journal_from_segments(request: Request):
         import traceback
         traceback.print_exc()
         return {"success": False, "error": str(e)}
+    
+@router.get("/lookup-medical-term/")
+async def lookup_medical_term(term: str = Query(..., description="Medical term to look up")):
+    """
+    Real-time medical term lookup for the UI.
+    User can highlight a term and get an instant explanation.
+    """
+    explanation = medical_terms_service.get_term_explanation(term)
+    
+    if explanation:
+        return {
+            "success": True,
+            "term": term,
+            "simple": explanation.get("simple", ""),
+            "explanation": explanation.get("explanation", ""),
+            "category": explanation.get("category", "general")
+        }
+    else:
+        return {
+            "success": False,
+            "term": term,
+            "message": "Term not found in dictionary. Ask your doctor to explain."
+        }
+
+
+@router.post("/detect-medical-terms/")
+async def detect_medical_terms(text: str):
+    """
+    Scan text and return all detected medical terms with explanations.
+    Useful for highlighting terms in the transcript view.
+    """
+    detected = medical_terms_service.detect_medical_terms(text)
+    
+    return {
+        "success": True,
+        "terms_found": len(detected),
+        "terms": detected
+    }

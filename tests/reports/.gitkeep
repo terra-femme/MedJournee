@@ -1,0 +1,5 @@
+# Test Reports Directory
+#
+# Generated test reports are saved here in JSON format:
+#   - YYYY-MM-DD_HH-MM-SS.json  (timestamped reports)
+#   - latest.json               (most recent report)

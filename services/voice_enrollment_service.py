@@ -3,7 +3,6 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import os
-import pymysql
 from cryptography.fernet import Fernet
 import io
 import librosa
@@ -12,6 +11,10 @@ import json
 import uuid
 import tempfile
 import subprocess
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def cosine_similarity_simple(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
     """Calculate cosine similarity without sklearn"""
@@ -33,14 +36,10 @@ class VoiceEnrollmentService:
     """Universal mobile audio support for voice enrollment"""
     
     def __init__(self):
-        # FIXED: Database config
-        self.db_config = {
-            'host': os.getenv("GOOGLE_SQL_HOST", "35.188.10.95"),
-            'user': os.getenv("GOOGLE_SQL_USER", "user001"),
-            'password': os.getenv("GOOGLE_SQL_PASSWORD", "0000"),
-            'database': os.getenv("GOOGLE_SQL_DATABASE", "mjournee"),
-            'charset': 'utf8mb4'
-        }
+        # Supabase config - use service key for server-side operations to bypass RLS
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+        self.supabase: Client = create_client(supabase_url, supabase_key)
         
         encryption_key = os.getenv("VOICE_ENCRYPTION_KEY")
         if not encryption_key:
@@ -51,8 +50,10 @@ class VoiceEnrollmentService:
             
         self.cipher = Fernet(encryption_key)
         
-        self.enrollment_threshold = 0.80
-        self.unknown_threshold = 0.70
+        # Lowered threshold to allow callers to apply their own thresholds
+        # Diarization uses 0.70, instant-transcribe uses 0.60
+        self.enrollment_threshold = 0.65
+        self.unknown_threshold = 0.55
         
         # Check FFmpeg
         try:
@@ -63,9 +64,9 @@ class VoiceEnrollmentService:
             self.ffmpeg_available = False
             print("FFmpeg not available - using native processing")
     
-    def get_db_connection(self):
-        """Create database connection"""
-        return pymysql.connect(**self.db_config)
+    def get_supabase(self) -> Client:
+        """Return Supabase client"""
+        return self.supabase
     
     async def load_audio_universal(self, audio_input, target_sr=16000) -> Tuple[np.ndarray, int]:
         """
@@ -194,18 +195,28 @@ class VoiceEnrollmentService:
             embeddings = []
             segment_duration = 3.0
             total_duration = len(audio_array) / sr
-            
+
+            # Debug: Check audio range
+            print(f"Audio stats: min={np.min(audio_array):.4f}, max={np.max(audio_array):.4f}, mean={np.mean(np.abs(audio_array)):.6f}")
+
+            segment_count = 0
             for start_time in range(0, int(total_duration - segment_duration), 2):
                 start_sample = int(start_time * sr)
                 end_sample = int((start_time + segment_duration) * sr)
                 segment = audio_array[start_sample:end_sample]
-                
+                segment_count += 1
+
                 embedding = self._extract_voice_features(segment, sr)
                 if embedding is not None:
                     embeddings.append(embedding)
-            
-            print(f"Extracted {len(embeddings)} voice embeddings from {total_duration:.1f}s")
-            return embeddings if len(embeddings) >= 5 else []
+
+            print(f"Processed {segment_count} segments, extracted {len(embeddings)} embeddings from {total_duration:.1f}s")
+
+            if len(embeddings) < 5:
+                print(f"Not enough embeddings ({len(embeddings)} < 5). Need more speech or louder audio.")
+                return []
+
+            return embeddings
             
         except Exception as e:
             print(f"Embedding extraction error: {e}")
@@ -229,18 +240,23 @@ class VoiceEnrollmentService:
             quality_report["recommendations"].append("Record at least 15-20 seconds")
             quality_report["is_valid"] = False
         
-        if rms_energy < 0.001:
+        if rms_energy < 0.0001:
             quality_report["issues"].append("Audio too quiet")
             quality_report["recommendations"].append("Speak louder")
             quality_report["is_valid"] = False
-        
+
+        print(f"Audio quality: duration={duration:.1f}s, rms_energy={rms_energy:.6f}, valid={quality_report['is_valid']}")
         return quality_report
     
     def _extract_voice_features(self, audio_segment: np.ndarray, sr: int) -> Optional[np.ndarray]:
         """Extract voice features from segment"""
         try:
             energy = librosa.feature.rms(y=audio_segment)[0]
-            if np.mean(energy) < 0.01:
+            mean_energy = np.mean(energy)
+
+            # Very low threshold - web audio is often quiet
+            if mean_energy < 0.0001:
+                print(f"  Segment too quiet: energy={mean_energy:.6f}")
                 return None
             
             features = []
@@ -320,26 +336,21 @@ class VoiceEnrollmentService:
         profile_json = json.dumps(voice_profile).encode()
         encrypted_profile = self.cipher.encrypt(profile_json)
         enrollment_id = str(uuid.uuid4())
-        
-        conn = self.get_db_connection()
-        try:
-            with conn.cursor() as cursor:
-                sql = """
-                INSERT INTO voice_enrollments 
-                (id, family_id, speaker_name, relationship, encrypted_voice_profile, 
-                 quality_score, sample_count, enrollment_date, active, privacy_note)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(sql, (
-                    enrollment_id, family_id, speaker_name, relationship,
-                    encrypted_profile.decode(), voice_profile["quality_score"],
-                    voice_profile["sample_count"], voice_profile["enrollment_date"],
-                    True, "Voice profile stored as encrypted embeddings only"
-                ))
-            conn.commit()
-            return enrollment_id
-        finally:
-            conn.close()
+
+        self.supabase.table("voice_enrollments").insert({
+            "id": enrollment_id,
+            "family_id": family_id,
+            "speaker_name": speaker_name,
+            "relationship": relationship,
+            "encrypted_voice_profile": encrypted_profile.decode(),
+            "quality_score": voice_profile["quality_score"],
+            "sample_count": voice_profile["sample_count"],
+            "enrollment_date": voice_profile["enrollment_date"],
+            "active": True,
+            "privacy_note": "Voice profile stored as encrypted embeddings only"
+        }).execute()
+
+        return enrollment_id
     
     async def identify_enrolled_speaker(self, audio_input, family_id: str) -> Tuple[Optional[str], float]:
         """
@@ -382,23 +393,20 @@ class VoiceEnrollmentService:
     async def _get_family_profiles(self, family_id: str) -> List[Dict]:
         """Get enrolled profiles"""
         try:
-            conn = self.get_db_connection()
+            result = self.supabase.table("voice_enrollments") \
+                .select("*") \
+                .eq("family_id", family_id) \
+                .eq("active", True) \
+                .execute()
+
             profiles = []
-            
-            try:
-                with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                    cursor.execute("SELECT * FROM voice_enrollments WHERE family_id = %s AND active = TRUE", (family_id,))
-                    records = cursor.fetchall()
-                
-                for record in records:
-                    encrypted_profile = record["encrypted_voice_profile"].encode()
-                    decrypted_data = self.cipher.decrypt(encrypted_profile)
-                    voice_profile = json.loads(decrypted_data.decode())
-                    voice_profile["record_id"] = record["id"]
-                    profiles.append(voice_profile)
-            finally:
-                conn.close()
-            
+            for record in result.data:
+                encrypted_profile = record["encrypted_voice_profile"].encode()
+                decrypted_data = self.cipher.decrypt(encrypted_profile)
+                voice_profile = json.loads(decrypted_data.decode())
+                voice_profile["record_id"] = record["id"]
+                profiles.append(voice_profile)
+
             return profiles
         except Exception as e:
             print(f"Failed to get profiles: {e}")
@@ -484,7 +492,7 @@ async def enhanced_speaker_processing(audio_file, family_id: str):
                 
                 print(f"Segment {i}: enrolled_name={enrolled_name}, confidence={confidence:.3f}")
                 
-                if enrolled_name and confidence >= 0.70:  # Lower threshold
+                if enrolled_name and confidence >= 0.65:  # Consistent with enrollment_threshold
                     segment["speaker"] = enrolled_name
                     segment["enrollment_match"] = True
                     segment["enrollment_confidence"] = confidence
