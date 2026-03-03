@@ -372,6 +372,41 @@ const API_BASE = window.location.origin;
 
 ---
 
+### ⚠️ CRITICAL: Trailing Slash Gotcha
+
+**This is the #1 mistake when configuring CORS.**
+
+Browsers send the `Origin` header WITHOUT a trailing slash:
+```
+Origin: https://medjournee-backend.onrender.com
+```
+
+But if your CORS config INCLUDES the trailing slash:
+```python
+allow_origins=["https://medjournee-backend.onrender.com/"]  # ❌ WRONG
+```
+
+The browser sees these as **different origins** and blocks the request.
+
+**Symptoms:**
+- Everything looks correct
+- Backend is running
+- Tailscale is connected
+- Still get CORS errors
+
+**The Fix:**
+```python
+# ❌ WRONG - trailing slash
+"https://medjournee-backend.onrender.com/"
+
+# ✅ CORRECT - no trailing slash
+"https://medjournee-backend.onrender.com"
+```
+
+**Always remove the trailing slash from CORS origins.**
+
+---
+
 ### Problem: "Failed to fetch" or "Network Error"
 
 **Diagnosis:**
