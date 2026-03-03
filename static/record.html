@@ -799,9 +799,13 @@
 
                     // Dim segments whose text is no longer present in the latest full transcript
                     // (Whisper retracted a hallucination in a subsequent chunk)
+                    // Normalize before comparing — Whisper may return the same words with different
+                    // punctuation across chunks, which would cause false retractions with exact matching.
+                    const normalFull = fullText.toLowerCase().replace(/[.,!?;:'"…\-]+/g, '').replace(/\s+/g, ' ').trim();
                     document.querySelectorAll('#transcriptContent .segment:not(.retracted)').forEach(el => {
                         const segText = el.querySelector('.segment-text')?.textContent?.trim() || '';
-                        if (segText.length > 4 && !fullText.includes(segText)) {
+                        const normalSeg = segText.toLowerCase().replace(/[.,!?;:'"…\-]+/g, '').replace(/\s+/g, ' ').trim();
+                        if (normalSeg.length > 4 && !normalFull.includes(normalSeg)) {
                             el.classList.add('retracted');
                             el.style.opacity = '0.35';
                             el.style.textDecoration = 'line-through';
