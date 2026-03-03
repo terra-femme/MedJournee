@@ -359,92 +359,65 @@ async def update_journal_entry(session_id: str, request: Request):
         data = await request.json()
         import json
         from datetime import datetime
-        
-        conn = database_service.get_connection()
-        
-        field_mapping = {
-            "visit_date": "visit_date",
-            "patient_name": "patient_name",
-            "visit_type": "visit_type",
-            "provider_name": "provider_name",
-            "main_reason": "main_reason",
-            "symptoms": "symptoms",
-            "diagnoses": "diagnoses",
-            "treatments": "treatments",
-            "vital_signs": "vital_signs",
-            "medications": "medications",
-            "follow_up_instructions": "follow_up_instructions",
-            "next_appointments": "next_appointments",
-            "family_summary": "family_summary"
+
+        allowed_fields = {
+            "visit_date", "patient_name", "visit_type", "provider_name",
+            "main_reason", "symptoms", "diagnoses", "treatments",
+            "vital_signs", "medications", "follow_up_instructions",
+            "next_appointments", "family_summary"
         }
-        
-        update_fields = []
-        update_values = []
-        
-        for frontend_field, db_column in field_mapping.items():
-            if frontend_field in data and frontend_field != 'session_id':
-                value = data[frontend_field]
-                
-                # DATE CONVERSION FIX
-                if frontend_field == "visit_date" and value:
+
+        updates = {}
+
+        for field in allowed_fields:
+            if field not in data:
+                continue
+            value = data[field]
+
+            # DATE CONVERSION FIX
+            if field == "visit_date" and value:
+                try:
+                    date_obj = datetime.strptime(value, "%B %d, %Y")
+                    value = date_obj.strftime("%Y-%m-%d")
+                except ValueError:
                     try:
-                        # Convert "October 1, 2025" to "2025-10-01"
-                        date_obj = datetime.strptime(value, "%B %d, %Y")
+                        date_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
                         value = date_obj.strftime("%Y-%m-%d")
-                    except ValueError:
-                        try:
-                            # Fallback: try ISO format
-                            date_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                            value = date_obj.strftime("%Y-%m-%d")
-                        except:
-                            # If parsing fails, skip this field
-                            print(f"Date parsing failed for: {value}")
-                            continue
-                
-                # Convert arrays/lists to JSON
-                elif frontend_field in ["symptoms", "diagnoses", "treatments", "medications", 
-                                       "follow_up_instructions", "next_appointments"]:
-                    if isinstance(value, list):
-                        value = json.dumps(value)
-                    elif isinstance(value, str) and value.strip() and not value.startswith('['):
-                        # Text with bullets - convert to array
-                        if '•' in value:
-                            items = [item.strip() for item in value.split('•') if item.strip()]
-                            value = json.dumps(items)
-                
-                # Convert vital signs to JSON
-                elif frontend_field == "vital_signs":
-                    if isinstance(value, dict):
-                        value = json.dumps(value)
-                    elif isinstance(value, str) and not value.startswith('{'):
-                        value = json.dumps({"note": value})
-                
-                update_fields.append(f"{db_column} = %s")
-                update_values.append(value)
-        
-        if not update_fields:
+                    except Exception:
+                        print(f"Date parsing failed for: {value}")
+                        continue
+
+            # Serialise list fields to JSON strings for Supabase
+            elif field in {"symptoms", "diagnoses", "treatments", "medications",
+                           "follow_up_instructions", "next_appointments"}:
+                if isinstance(value, list):
+                    value = json.dumps(value)
+                elif isinstance(value, str) and value.strip() and not value.startswith('['):
+                    if '•' in value:
+                        items = [item.strip() for item in value.split('•') if item.strip()]
+                        value = json.dumps(items)
+
+            elif field == "vital_signs":
+                if isinstance(value, dict):
+                    value = json.dumps(value)
+                elif isinstance(value, str) and not value.startswith('{'):
+                    value = json.dumps({"note": value})
+
+            updates[field] = value
+
+        if not updates:
             return {"success": False, "error": "No valid fields to update"}
-        
-        update_values.append(session_id)
-        
-        try:
-            with conn.cursor() as cursor:
-                sql = f"""
-                UPDATE journal_entries 
-                SET {', '.join(update_fields)},
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE session_id = %s
-                """
-                cursor.execute(sql, tuple(update_values))
-            conn.commit()
-            
-            return {
-                "success": True,
-                "message": "Journal entry updated successfully"
-            }
-        finally:
-            conn.close()
-            
+
+        database_service.supabase.table("journal_entries") \
+            .update(updates) \
+            .eq("session_id", session_id) \
+            .execute()
+
+        return {
+            "success": True,
+            "message": "Journal entry updated successfully"
+        }
+
     except Exception as e:
         print(f"Update journal error: {e}")
         import traceback
@@ -463,27 +436,17 @@ async def update_journal_notes(session_id: str, request: Request):
     try:
         data = await request.json()
         personal_notes = data.get("personal_notes", "")
-        
-        conn = database_service.get_connection()
-        try:
-            with conn.cursor() as cursor:
-                # Check if personal_notes column exists, if not we'll need to add it
-                sql = """
-                UPDATE journal_entries 
-                SET personal_notes = %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE session_id = %s
-                """
-                cursor.execute(sql, (personal_notes, session_id))
-            conn.commit()
-            
-            return {
-                "success": True,
-                "message": "Notes saved"
-            }
-        finally:
-            conn.close()
-            
+
+        database_service.supabase.table("journal_entries") \
+            .update({"personal_notes": personal_notes}) \
+            .eq("session_id", session_id) \
+            .execute()
+
+        return {
+            "success": True,
+            "message": "Notes saved"
+        }
+
     except Exception as e:
         print(f"Update notes error: {e}")
         return {

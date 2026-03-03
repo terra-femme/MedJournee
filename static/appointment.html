@@ -219,6 +219,15 @@
         <button class="action-btn primary" id="saveBtn" onclick="saveAppointment()">Save</button>
     </div>
 
+    <!-- Save Toast -->
+    <div id="saveToast" style="
+        position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px);
+        background: rgba(76,175,80,0.92); color: white; padding: 10px 24px;
+        border-radius: 24px; font-size: 14px; font-weight: 600;
+        opacity: 0; transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+        pointer-events: none; z-index: 9999; white-space: nowrap;
+    ">&#10003; Appointment saved</div>
+
     <script>
         const API_BASE = 'https://terra.tail8736aa.ts.net';  // Tailscale Serve HTTPS URL
         const USER_ID = 'user-001';
@@ -743,21 +752,14 @@
                             await savePendingTalkingPoints();
                         }
 
-                        // Update UI to show talking points section
-                        document.getElementById('headerTitle').textContent = appointment.title;
-                        document.getElementById('deleteBtn').style.display = 'block';
-                        document.getElementById('statusContainer').style.display = 'block';
-                        document.getElementById('talkingPointsSection').style.display = 'block';
-                        document.getElementById('linkedSection').style.display = 'block';
-                        document.getElementById('saveBtn').textContent = 'Update';
-
-                        renderTalkingPoints();
-                        renderLinkedEntry();
-
-                        // Update URL without reload
-                        window.history.replaceState({}, '', `/static/appointment.html?id=${appointmentId}`);
+                        // Show toast then navigate back so user sees appointment in calendar
+                        showSaveToast('Appointment created!');
+                        setTimeout(() => {
+                            window.location.href = '/static/mobile.html';
+                        }, 1400);
                     } else {
-                        goBack();
+                        showSaveToast('Appointment updated!');
+                        setTimeout(() => goBack(), 1000);
                     }
                 } else {
                     alert('Failed to save appointment');
@@ -766,6 +768,17 @@
                 console.error('Failed to save appointment:', error);
                 alert('Failed to save appointment');
             }
+        }
+
+        function showSaveToast(msg) {
+            const toast = document.getElementById('saveToast');
+            toast.textContent = '\u2713 ' + msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(10px)';
+            }, 1200);
         }
 
         async function savePendingTalkingPoints() {

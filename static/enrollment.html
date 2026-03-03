@@ -434,8 +434,27 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Family ID</label>
-            <input type="text" id="familyId" class="form-input" placeholder="e.g., nguyen-family-2024" value="">
+            <label class="form-label">Family Group</label>
+            <!-- Read-only display — prevents accidental mismatches with the recording page -->
+            <div id="familyIdDisplay" style="
+                display: flex; align-items: center; gap: 10px;
+                background: rgba(255,255,255,0.6); border: 1px solid rgba(224,224,224,0.6);
+                border-radius: 12px; padding: 12px 14px;
+            ">
+                <span id="familyIdLabel" style="flex:1; color: #333; font-size: 15px; font-weight: 500;"></span>
+                <button id="familyIdToggleBtn" onclick="toggleFamilyIdEdit()" style="
+                    background: none; border: none; color: #2e7d32;
+                    font-size: 13px; cursor: pointer; padding: 2px 6px;
+                    border-radius: 6px; white-space: nowrap;
+                ">&#9998; Change</button>
+            </div>
+            <!-- Hidden editable input — only shown when user explicitly taps Change -->
+            <input type="text" id="familyId" class="form-input" placeholder="Enter family group ID"
+                   style="display:none; margin-top: 8px;"
+                   oninput="updateFamilyIdLabel()">
+            <div id="familyIdHint" style="
+                display:none; font-size: 12px; color: #666; margin-top: 6px; line-height: 1.5;
+            ">Changing this will also update your recording page. All enrolled speakers must share the same group ID.</div>
         </div>
 
         <div class="form-group">
@@ -534,21 +553,41 @@
         const waveform = document.getElementById('waveform');
         const submitBtn = document.getElementById('submitBtn');
         const familyIdInput = document.getElementById('familyId');
+        const familyIdLabel = document.getElementById('familyIdLabel');
+        const familyIdHint = document.getElementById('familyIdHint');
+        const familyIdToggleBtn = document.getElementById('familyIdToggleBtn');
 
-        // Load family ID from localStorage
-        const savedFamilyId = localStorage.getItem('medjournee_family_id');
-        if (savedFamilyId) {
-            familyIdInput.value = savedFamilyId;
-            loadEnrollments(savedFamilyId);
+        // Load family ID from localStorage, fall back to 'family-001' to match recording page.
+        // Write back immediately so both pages stay in sync even if the user never opens this form.
+        const savedFamilyId = localStorage.getItem('medjournee_family_id') || 'family-001';
+        familyIdInput.value = savedFamilyId;
+        familyIdLabel.textContent = savedFamilyId;
+        localStorage.setItem('medjournee_family_id', savedFamilyId);
+        loadEnrollments(savedFamilyId);
+
+        function toggleFamilyIdEdit() {
+            const isHidden = familyIdInput.style.display === 'none';
+            if (isHidden) {
+                familyIdInput.style.display = 'block';
+                familyIdHint.style.display = 'block';
+                familyIdToggleBtn.innerHTML = '&#10003; Done';
+                familyIdInput.focus();
+                familyIdInput.select();
+            } else {
+                familyIdInput.style.display = 'none';
+                familyIdHint.style.display = 'none';
+                familyIdToggleBtn.innerHTML = '&#9998; Change';
+            }
         }
 
-        // Save family ID when changed
-        familyIdInput.addEventListener('change', function() {
-            localStorage.setItem('medjournee_family_id', this.value);
-            if (this.value) {
-                loadEnrollments(this.value);
+        function updateFamilyIdLabel() {
+            const newId = familyIdInput.value.trim();
+            if (newId) {
+                familyIdLabel.textContent = newId;
+                localStorage.setItem('medjournee_family_id', newId);
+                loadEnrollments(newId);
             }
-        });
+        }
 
         async function toggleRecording() {
             if (!mediaRecorder || mediaRecorder.state === 'inactive') {

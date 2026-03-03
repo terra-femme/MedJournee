@@ -358,14 +358,11 @@ class DiarizationAgent:
     def _apply_default_roles(self, segments: List[SpeakerSegment]) -> List[SpeakerSegment]:
         """
         Apply default speaker roles.
-        SPEAKER_1 = Healthcare Provider (BLUE)
-        SPEAKER_2 = Patient/Family (GREEN)
+        All speakers start as UNKNOWN until enrollment matching identifies them.
+        We never assume who is the provider — multiple people may be in the room.
         """
         for segment in segments:
-            if segment.speaker == "SPEAKER_2":
-                segment.speaker_role = SpeakerRole.PATIENT_FAMILY
-            else:
-                segment.speaker_role = SpeakerRole.HEALTHCARE_PROVIDER
+            segment.speaker_role = SpeakerRole.UNKNOWN
 
         return segments
 
@@ -486,15 +483,17 @@ class DiarizationAgent:
                     )
                     wrapper.close()
 
-                    # Accept matches with confidence >= 0.65 (lowered from 0.70)
-                    # Voice enrollment service now returns matches at 0.65 threshold
-                    if enrolled_name and confidence >= 0.65:
-                        # Track this speaker mapping
+                    # Log every attempt so enrollment issues are diagnosable
+                    print(f"[Diarization] Segment {i} ({segment.speaker}, {segment.end_time - segment.start_time:.1f}s): "
+                          f"best match='{enrolled_name}' confidence={confidence:.3f}")
+
+                    # Accept matches with confidence >= 0.60 (aligned with instant-transcribe threshold)
+                    if enrolled_name and confidence >= 0.60:
+                        # Track this speaker mapping (keep highest confidence per cloud speaker)
                         current_best = speaker_to_enrolled.get(segment.speaker, (None, 0.0))
                         if confidence > current_best[1]:
                             speaker_to_enrolled[segment.speaker] = (enrolled_name, confidence)
-
-                        print(f"[Diarization] Segment {i} ({segment.speaker}): Matched '{enrolled_name}' with {confidence:.2f} confidence")
+                            print(f"[Diarization] -> Updated best match: {segment.speaker} = '{enrolled_name}' ({confidence:.3f})")
 
                 finally:
                     try:

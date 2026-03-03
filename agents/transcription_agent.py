@@ -241,11 +241,17 @@ class TranscriptionAgent:
             file_tuple = (f"audio.{input_ext}", audio_content, base_content_type)
 
             # Use verbose_json to get detected language and segment info
-            # NO PROMPT - Whisper echoes prompts when it can't understand audio
+            # temperature=0 disables Whisper's probabilistic sampling — prevents it from
+            # "completing" conversational gaps with hallucinated responses (e.g. adding
+            # "Are you okay?" during a pause after "Hello, how are you?").
+            # initial_prompt gives medical domain context without echoing back — keep it
+            # short (< 10 words) to avoid the known prompt-echo issue.
             api_params = {
                 "model": "whisper-1",
                 "file": file_tuple,
                 "response_format": "verbose_json",
+                "temperature": 0,
+                "prompt": "Medical appointment. Patient and doctor.",
             }
 
             response = self.client.audio.transcriptions.create(**api_params)
@@ -537,7 +543,7 @@ class TranscriptionAgent:
             (r"like.*subscribe", "like+subscribe"),
             (r"comment.*below", "comment+below"),
             (r"thanks.*watching", "thanks+watching"),
-            (r"see you.*next", "see you+next"),
+            # NOTE: "see you next time" checked separately with length guard below
             # Vietnamese patterns (with and without diacritics)
             (r"dang k[yi].*kenh", "dang ky+kenh"),
             (r"kenh.*dang k[yi]", "kenh+dang ky"),
@@ -561,6 +567,12 @@ class TranscriptionAgent:
             if re.search(pattern, text_lower) or re.search(pattern, text_normalized):
                 print(f"[Hallucination Filter] Pattern blocked ('{pattern}'): '{text}'")
                 return "", True, f"Pattern: {name}"
+
+        # "see you next time" is a normal medical farewell — only block as hallucination
+        # if it appears as a short standalone phrase (< 80 chars), not inside a real conversation
+        if len(text) < 80 and (re.search(r"see you.*next", text_lower) or re.search(r"see you.*next", text_normalized)):
+            print(f"[Hallucination Filter] Pattern blocked ('see you.*next' short-form): '{text}'")
+            return "", True, "Pattern: see you+next"
 
         # =================================================================
         # CHECK 5: Specific known hallucination strings

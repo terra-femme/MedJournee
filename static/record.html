@@ -446,10 +446,9 @@
 
         // Load saved family ID from localStorage and check for appointment
         document.addEventListener('DOMContentLoaded', async function() {
-            const savedFamilyId = localStorage.getItem('medjournee_family_id');
-            if (savedFamilyId) {
-                document.getElementById('familyId').value = savedFamilyId;
-            }
+            const savedFamilyId = localStorage.getItem('medjournee_family_id') || 'family-001';
+            document.getElementById('familyId').value = savedFamilyId;
+            localStorage.setItem('medjournee_family_id', savedFamilyId);
             // Save on change
             document.getElementById('familyId').addEventListener('change', function() {
                 localStorage.setItem('medjournee_family_id', this.value);
@@ -798,7 +797,19 @@
                     const fullText = result.text.trim();
                     const fullTranslation = (result.translation || '').trim();
 
-                    // FIX: Only show NEW content by comparing with previous full text
+                    // Dim segments whose text is no longer present in the latest full transcript
+                    // (Whisper retracted a hallucination in a subsequent chunk)
+                    document.querySelectorAll('#transcriptContent .segment:not(.retracted)').forEach(el => {
+                        const segText = el.querySelector('.segment-text')?.textContent?.trim() || '';
+                        if (segText.length > 4 && !fullText.includes(segText)) {
+                            el.classList.add('retracted');
+                            el.style.opacity = '0.35';
+                            el.style.textDecoration = 'line-through';
+                            el.title = 'Retracted by transcription engine';
+                        }
+                    });
+
+                    // Only show NEW content by comparing with previous full text
                     if (fullText !== lastFullText && fullText.length > lastFullText.length) {
                         // Find where the new content starts
                         let newText = fullText;
@@ -876,23 +887,22 @@
             const container = document.getElementById('transcriptContent');
             const segmentIndex = instantTranscripts.length;
 
-            const isProvider = result.speaker_role === 'provider' ||
-                               result.speaker_role === 'Healthcare Provider';
+            const isEnrolled = !!result.speaker_name;
 
-            // Use enrolled speaker name if available, otherwise fall back to role
+            // Enrolled speaker → show their name; unknown → show "Speaker"
             let speakerLabel;
-            if (result.speaker_name) {
+            if (isEnrolled) {
                 const confidence = result.enrollment_confidence ?
                     ` (${Math.round(result.enrollment_confidence * 100)}%)` : '';
                 speakerLabel = `${result.speaker_name}${confidence}`;
             } else {
-                speakerLabel = isProvider ? 'Provider' : 'Family';
+                speakerLabel = 'Speaker';
             }
 
             const segmentEl = document.createElement('div');
-            segmentEl.className = `segment ${isProvider ? 'speaker-1' : 'speaker-2'}`;
+            segmentEl.className = `segment ${isEnrolled ? 'speaker-2' : 'speaker-1'}`;
             segmentEl.innerHTML = `
-                <div class="segment-speaker ${isProvider ? 'provider' : 'patient'}">
+                <div class="segment-speaker ${isEnrolled ? 'patient' : 'provider'}">
                     ${speakerLabel} - Segment ${segmentIndex}
                 </div>
                 <div class="segment-text">${escapeHtml(result.text)}</div>

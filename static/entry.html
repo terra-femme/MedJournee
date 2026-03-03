@@ -563,6 +563,10 @@
     </div>
 
     <div class="action-bar" id="actionBar" style="display: none;">
+        <button class="btn-save" onclick="saveAllChanges()" style="
+            background: rgba(76,175,80,0.2); border: 1px solid rgba(76,175,80,0.4);
+            color: #81c784; padding: 8px 18px; border-radius: 20px;
+            font-size: 14px; font-weight: 600; cursor: pointer;">&#128190; Save</button>
         <button class="btn-share" onclick="shareEntry()">📤 Share</button>
         <button class="btn-delete" onclick="deleteEntry()">🗑️ Delete</button>
     </div>
@@ -1059,11 +1063,14 @@
                     text = mainLine.substring(colonIndex + 1).trim();
                 }
 
-                // Determine speaker class
-                const isProvider = speaker.toLowerCase().includes('provider') ||
-                                   speaker.toLowerCase().includes('healthcare') ||
-                                   speaker === 'SPEAKER_1';
-                const speakerClass = isProvider ? 'provider' : 'family';
+                // Format "SPEAKER_1" → "Speaker 1" for display
+                if (/^SPEAKER_\d+$/.test(speaker)) {
+                    speaker = 'Speaker ' + speaker.replace('SPEAKER_', '');
+                }
+
+                // Enrolled speakers (named people) get green highlight; generic speakers get blue
+                const isGenericSpeaker = speaker.startsWith('Speaker ');
+                const speakerClass = isGenericSpeaker ? 'provider' : 'patient';
 
                 let html = `
                     <div class="transcript-line">
@@ -1163,14 +1170,21 @@
             autoSaveTimeout = setTimeout(async () => {
                 const notes = document.getElementById('personalNotes').value;
                 try {
-                    await fetch(`${API_BASE}/live-session/update-journal-notes/${sessionId}`, {
+                    const response = await fetch(`${API_BASE}/live-session/update-journal-notes/${sessionId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ personal_notes: notes })
                     });
-                    showSaveIndicator();
+                    const result = await response.json();
+                    if (result.success) {
+                        showSaveIndicator();
+                    } else {
+                        console.error('Notes save failed:', result.error);
+                        showSaveIndicator('error');
+                    }
                 } catch (error) {
                     console.error('Auto-save error:', error);
+                    showSaveIndicator('error');
                 }
             }, 2000);
         }
@@ -1196,10 +1210,17 @@
             }
         }
 
-        function showSaveIndicator() {
+        function showSaveIndicator(state = 'ok') {
             const indicator = document.getElementById('saveIndicator');
+            if (state === 'error') {
+                indicator.textContent = '✕ Save failed';
+                indicator.style.background = 'rgba(229,57,53,0.8)';
+            } else {
+                indicator.textContent = '✓ Saved';
+                indicator.style.background = 'rgba(76,175,80,0.8)';
+            }
             indicator.classList.add('show');
-            setTimeout(() => indicator.classList.remove('show'), 2000);
+            setTimeout(() => indicator.classList.remove('show'), 2500);
         }
 
         function shareEntry() {

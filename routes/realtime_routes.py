@@ -229,7 +229,12 @@ async def finalize_session(
             # Build raw transcript to store alongside AI summary
             raw_transcript_lines = []
             for seg in final_segments:
-                speaker = seg.enrolled_name or (seg.speaker_role.value if hasattr(seg.speaker_role, 'value') else str(seg.speaker_role))
+                # Enrolled name takes priority; otherwise format "SPEAKER_1" → "Speaker 1"
+                if seg.enrolled_name:
+                    speaker = seg.enrolled_name
+                else:
+                    raw_label = seg.speaker or "SPEAKER_1"
+                    speaker = raw_label.replace("SPEAKER_", "Speaker ").replace("_", " ").title()
                 text = seg.text
                 translation = seg.translation if hasattr(seg, 'translation') else ""
 
