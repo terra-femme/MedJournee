@@ -247,8 +247,12 @@ class TranslationAgent:
             # Translate
             result = await self.translate(segment.text, role_info.translate_to, None)
 
-            # Assign speaker role based on language detection
-            if role_info.speaker_role == "provider":
+            # Assign speaker role based on language detection.
+            # BUT: if diarization already matched an enrolled speaker, never overwrite that —
+            # an enrolled speaker speaking English should not be re-labelled as Healthcare Provider.
+            if segment.enrolled_name or segment.enrollment_match:
+                speaker_role = segment.speaker_role
+            elif role_info.speaker_role == "provider":
                 speaker_role = SpeakerRole.HEALTHCARE_PROVIDER
             elif role_info.speaker_role == "family":
                 speaker_role = SpeakerRole.PATIENT_FAMILY
