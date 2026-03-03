@@ -173,6 +173,121 @@ const API_BASE = 'http://100.82.173.110:8000';  // Tailscale backend IP
 
 ---
 
+## Tailscale Serve Explained
+
+### What is Tailscale Serve?
+
+`tailscale serve` is a Tailscale feature that provides **HTTPS endpoints** for services running on your Tailscale devices. It solves the "mixed content" problem when your frontend (HTTPS) needs to talk to your backend (HTTP).
+
+### Why You Need It
+
+| Without Serve | With Serve |
+|---------------|------------|
+| Backend at `http://100.82.173.110:8000` | Backend at `https://your-desktop.tailnet-name.ts.net` |
+| HTTP protocol | HTTPS protocol |
+| ❌ Blocked by browsers (mixed content) | ✅ Works in all browsers |
+| Direct IP access | MagicDNS hostname |
+
+### How It Works
+
+```
+┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
+│   User Browser  │ ──────▶ │  Tailscale Serve │ ──────▶ │  FastAPI App    │
+│   (HTTPS PWA)   │         │  (Reverse Proxy) │         │  (localhost:8000)│
+└─────────────────┘         └──────────────────┘         └─────────────────┘
+         │                           │                           │
+         │    https://terra.         │      http://              │
+         │    tail8736aa.ts.net      │      localhost:8000       │
+         │                           │                           │
+         └───────────────────────────┘                           │
+              Tailscale provides                                  │
+              TLS certificate                                     │
+              (free & automatic)                                  │
+```
+
+### The Command
+
+```bash
+# On your Tailscale machine (your desktop)
+tailscale serve --https=443 localhost:8000
+```
+
+**What this does:**
+1. Creates an HTTPS endpoint at `https://your-machine.tailnet-name.ts.net`
+2. Obtains a free TLS certificate automatically (via Let's Encrypt)
+3. Proxies all requests to `localhost:8000` (your FastAPI app)
+4. Only accessible to devices on your Tailscale network
+
+### Getting Your Serve URL
+
+After running the command, get your URL:
+
+```bash
+tailscale serve status
+```
+
+Output example:
+```
+https://terra.tail8736aa.ts.net (serve)
+|-- / proxy http://127.0.0.1:8000
+```
+
+Use this URL in your frontend's `API_BASE`.
+
+### Serve vs Funnel
+
+| Feature | `tailscale serve` | `tailscale funnel` |
+|---------|-------------------|-------------------|
+| **Who can access** | Only your Tailnet members | **Public internet** |
+| **Authentication** | Tailscale login required | None |
+| **Use case** | Private internal tools | Public services |
+| **Security** | Private by default | Public by default |
+| **Cost** | Free | Free |
+| **You want this?** | ✅ **YES** | ❌ No |
+
+### Common Serve Commands
+
+```bash
+# Start serving
+tailscale serve --https=443 localhost:8000
+
+# Check status
+tailscale serve status
+
+# Stop serving
+tailscale serve --https=443 off
+
+# Serve on different port
+tailscale serve --https=8443 localhost:8000
+```
+
+### Troubleshooting Serve
+
+**Problem: "certificates not enabled"**
+
+**Fix:** Enable HTTPS in Tailscale admin console:
+1. Go to https://login.tailscale.com/admin/settings/features
+2. Turn on **HTTPS Certificates**
+3. Wait 1-2 minutes
+4. Try `tailscale serve` again
+
+**Problem: "address already in use"**
+
+**Fix:** Port 443 is taken. Use a different port:
+```bash
+tailscale serve --https=8443 localhost:8000
+# Then access via https://your-machine.tailnet-name.ts.net:8443
+```
+
+**Problem: Serve URL not working**
+
+**Checks:**
+1. Is your FastAPI app running on `localhost:8000`?
+2. Is Tailscale connected? (`tailscale status`)
+3. Try accessing from same machine: `curl https://your-machine.tailnet-name.ts.net/test`
+
+---
+
 ## Critical Configuration Steps (Required)
 
 ### Step 1: Update Render Domain in CORS
