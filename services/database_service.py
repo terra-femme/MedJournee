@@ -213,7 +213,11 @@ class DatabaseService:
         # Build raw transcript from segments
         transcript_lines = []
         for seg in segments:
-            speaker = seg.get("enrolled_name") or seg.get("speaker_role", "Unknown")
+            # Enrolled name takes priority; otherwise format "SPEAKER_1" → "Speaker 1".
+            # Never fall back to speaker_role — it would expose "Healthcare Provider" as a label.
+            raw_label = seg.get("speaker", "SPEAKER_1")
+            speaker = (seg.get("enrolled_name")
+                       or raw_label.replace("SPEAKER_", "Speaker ").replace("_", " ").title())
             text = seg.get("text", "")
             translation = seg.get("translation", "")
 
