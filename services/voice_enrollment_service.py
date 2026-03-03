@@ -377,13 +377,16 @@ class VoiceEnrollmentService:
             
             for profile in enrolled_profiles:
                 similarity = self._calculate_voice_similarity(embedding, profile)
-                if similarity > best_similarity and similarity >= self.enrollment_threshold:
+                # No internal threshold — return the best similarity and let callers
+                # apply their own threshold (orchestrator uses 0.60, diarization uses 0.60).
+                # A floor of 0.30 filters out completely unrelated voices.
+                if similarity > best_similarity and similarity > 0.30:
                     best_similarity = similarity
                     best_match = profile["speaker_name"]
-            
+
             if best_match:
                 print(f"Matched: {best_match} ({best_similarity:.3f})")
-            
+
             return best_match, best_similarity
             
         except Exception as e:
