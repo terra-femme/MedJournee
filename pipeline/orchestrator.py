@@ -745,18 +745,17 @@ class MedJourneePipeline:
                     detected_language=transcription.detected_language
                 )
 
-            # Determine translation target based on detected language
+            # Determine translation target based on detected language only
+            # (we never assume role from language — multiple people may be in the room)
             detected = transcription.detected_language.lower() if transcription.detected_language else "unknown"
 
-            if detected.startswith(provider_spoken[:2]):
-                target = provider_translate_to
-                speaker_role = SpeakerRole.HEALTHCARE_PROVIDER
-            elif detected.startswith(family_spoken[:2]):
+            if detected.startswith(family_spoken[:2]):
                 target = family_translate_to
-                speaker_role = SpeakerRole.PATIENT_FAMILY
             else:
                 target = provider_translate_to
-                speaker_role = SpeakerRole.UNKNOWN
+
+            # All unidentified speakers are UNKNOWN until enrollment matching names them
+            speaker_role = SpeakerRole.UNKNOWN
 
             # Try to identify enrolled speaker if family_id provided
             speaker_name = ""
@@ -771,8 +770,6 @@ class MedJourneePipeline:
                     if matched_name and confidence >= 0.60:
                         speaker_name = matched_name
                         enrollment_confidence = confidence
-                        # IMPORTANT: Override speaker_role for enrolled speakers
-                        # Enrolled speakers are always family members
                         speaker_role = SpeakerRole.PATIENT_FAMILY
                         print(f"[InstantTranscribe] Matched enrolled speaker: {matched_name} ({confidence:.2f})")
                 except Exception as e:

@@ -542,6 +542,7 @@
             selectedDate = formatDateStr(currentDate);
             renderCalendar();
             loadMonthAppointments();
+            openDayModal(selectedDate);
         }
 
         function selectDate(dateStr) {
@@ -800,7 +801,8 @@
         }
 
         function createEntryCard(entry) {
-            const date = new Date(entry.date);
+            // Append T00:00:00 to force local-timezone parsing (plain date strings parse as UTC)
+            const date = new Date(entry.date + 'T00:00:00');
             const day = date.getDate().toString().padStart(2, '0');
             const month = date.toLocaleString('en', { month: 'short' });
 
