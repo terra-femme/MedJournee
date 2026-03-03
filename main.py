@@ -66,7 +66,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://medjournee-backend.onrender.com/",  # Render PWA frontend (UPDATE THIS)
+        "https://medjournee-backend.onrender.com",  # Render PWA frontend
         "http://localhost:8000",             # Local development
         "http://localhost:3000",             # Local development alternative
         "http://localhost:8080",             # Local development alternative
