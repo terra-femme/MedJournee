@@ -65,7 +65,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=[
+        "https://medjournee-backend.onrender.com/",  # Render PWA frontend (UPDATE THIS)
+        "http://localhost:8000",             # Local development
+        "http://localhost:3000",             # Local development alternative
+        "http://localhost:8080",             # Local development alternative
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
