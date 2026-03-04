@@ -36,4 +36,11 @@ node_modules/
 *.pkl
 *.joblib
 *.h5
+
+# AI Assistant Folders
 .claude
+.kimi-primer
+
+# Security Reports
+security_report.html
+SQL/
