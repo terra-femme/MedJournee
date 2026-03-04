@@ -29,6 +29,12 @@ jobs:
           pip install bandit[toml] pip-audit detect-secrets safety
 
       # Step 1: Secrets detection
+      - name: Ensure secrets baseline exists
+        run: |
+          if [ ! -f .secrets.baseline ]; then
+            detect-secrets scan > .secrets.baseline
+          fi
+
       - name: Detect secrets
         id: detect-secrets
         run: |
