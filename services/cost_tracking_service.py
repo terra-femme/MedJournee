@@ -46,6 +46,7 @@ class CostRecord:
     quantity: float  # minutes or tokens
     unit: str  # "minutes", "tokens", "characters"
     cost_usd: float
+    user_id: str = ""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     metadata: Dict = field(default_factory=dict)
 
@@ -118,11 +119,21 @@ class CostTracker:
         self._session_budgets: Dict[str, float] = {}
         self._lock = asyncio.Lock()
 
+        # Supabase for persistence
+        import os
+        from supabase import create_client
+        from dotenv import load_dotenv
+        load_dotenv()
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+        self._supabase = create_client(supabase_url, supabase_key) if supabase_url else None
+
     async def record_whisper_call(
         self,
         session_id: str,
         audio_minutes: float,
-        audio_seconds: Optional[float] = None
+        audio_seconds: Optional[float] = None,
+        user_id: str = ""
     ) -> CostRecord:
         """
         Record an OpenAI Whisper API call.
@@ -147,6 +158,7 @@ class CostTracker:
             quantity=audio_minutes,
             unit="minutes",
             cost_usd=cost,
+            user_id=user_id,
             metadata={"audio_seconds": audio_minutes * 60}
         )
 
@@ -158,7 +170,8 @@ class CostTracker:
         session_id: str,
         input_tokens: int,
         output_tokens: int,
-        model: str = "gpt-4"
+        model: str = "gpt-4",
+        user_id: str = ""
     ) -> CostRecord:
         """
         Record an OpenAI GPT-4 API call.
@@ -198,6 +211,7 @@ class CostTracker:
             quantity=input_tokens,
             unit="tokens",
             cost_usd=input_cost,
+            user_id=user_id,
             metadata={"model": model, "is_turbo": is_turbo}
         )
         await self._add_record(input_record)
@@ -211,6 +225,7 @@ class CostTracker:
             quantity=output_tokens,
             unit="tokens",
             cost_usd=output_cost,
+            user_id=user_id,
             metadata={"model": model, "is_turbo": is_turbo}
         )
         await self._add_record(output_record)
@@ -238,7 +253,8 @@ class CostTracker:
         session_id: str,
         audio_minutes: float,
         audio_seconds: Optional[float] = None,
-        with_diarization: bool = True
+        with_diarization: bool = True,
+        user_id: str = ""
     ) -> CostRecord:
         """
         Record an AssemblyAI API call.
@@ -270,6 +286,7 @@ class CostTracker:
             quantity=audio_minutes,
             unit="minutes",
             cost_usd=cost,
+            user_id=user_id,
             metadata={
                 "with_diarization": with_diarization,
                 "audio_seconds": audio_minutes * 60
@@ -410,11 +427,27 @@ class CostTracker:
                 del self._session_budgets[session_id]
 
     async def _add_record(self, record: CostRecord):
-        """Add a cost record (thread-safe)."""
+        """Add a cost record — in-memory + Supabase (best-effort)."""
         async with self._lock:
             if record.session_id not in self._session_costs:
                 self._session_costs[record.session_id] = []
             self._session_costs[record.session_id].append(record)
+
+        # Persist to Supabase (non-blocking, best-effort)
+        if self._supabase:
+            try:
+                self._supabase.table("api_costs").insert({
+                    "session_id": record.session_id,
+                    "user_id": record.user_id,
+                    "provider": record.provider.value,
+                    "operation": record.operation.value,
+                    "quantity": record.quantity,
+                    "unit": record.unit,
+                    "cost_usd": record.cost_usd,
+                    "metadata": record.metadata
+                }).execute()
+            except Exception as e:
+                print(f"[CostTracker] Supabase persist failed (non-fatal): {e}")
 
 
 # Global instance
@@ -430,28 +463,30 @@ def get_cost_tracker() -> CostTracker:
 
 
 # Convenience functions
-async def record_whisper_cost(session_id: str, audio_minutes: float) -> CostRecord:
+async def record_whisper_cost(session_id: str, audio_minutes: float, user_id: str = "") -> CostRecord:
     """Record Whisper API cost."""
-    return await get_cost_tracker().record_whisper_call(session_id, audio_minutes)
+    return await get_cost_tracker().record_whisper_call(session_id, audio_minutes, user_id=user_id)
 
 
 async def record_gpt4_cost(
     session_id: str,
     input_tokens: int,
-    output_tokens: int
+    output_tokens: int,
+    user_id: str = ""
 ) -> CostRecord:
     """Record GPT-4 API cost."""
-    return await get_cost_tracker().record_gpt4_call(session_id, input_tokens, output_tokens)
+    return await get_cost_tracker().record_gpt4_call(session_id, input_tokens, output_tokens, user_id=user_id)
 
 
 async def record_assemblyai_cost(
     session_id: str,
     audio_minutes: float,
-    with_diarization: bool = True
+    with_diarization: bool = True,
+    user_id: str = ""
 ) -> CostRecord:
     """Record AssemblyAI API cost."""
     return await get_cost_tracker().record_assemblyai_call(
-        session_id, audio_minutes, with_diarization=with_diarization
+        session_id, audio_minutes, with_diarization=with_diarization, user_id=user_id
     )
 
 

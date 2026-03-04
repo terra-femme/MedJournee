@@ -311,6 +311,12 @@ class DatabaseService:
             traceback.print_exc()
             return None
 
+    async def delete_journal_entry(self, session_id: str) -> bool:
+        """Delete a journal entry and its associated live session"""
+        self.supabase.table("journal_entries").delete().eq("session_id", session_id).execute()
+        self.supabase.table("live_sessions").delete().eq("session_id", session_id).execute()
+        return True
+
     async def list_user_journals(self, user_id: str, limit: int = 50) -> List[Dict]:
         """Get all journal entries for a user"""
         result = self.supabase.table("journal_entries") \

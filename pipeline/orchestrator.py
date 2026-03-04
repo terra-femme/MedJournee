@@ -242,6 +242,7 @@ class MedJourneePipeline:
         self,
         audio_file,
         family_id: str,
+        user_id: str = "",
         target_language: str = "vi",
         patient_name: str = "Patient",
         session_id: Optional[str] = None,
@@ -263,6 +264,7 @@ class MedJourneePipeline:
         state = PipelineState(
             session_id=session_id or f"session-{uuid.uuid4()}",
             family_id=family_id,
+            user_id=user_id,
             patient_name=patient_name,
             target_language=target_language,
             provider_spoken=provider_spoken,
@@ -336,6 +338,18 @@ class MedJourneePipeline:
                                      segments=len(state.diarization.segments) if state.diarization else 0)
             else:
                 print(f"[Pipeline] Diarization: {len(state.diarization.segments) if state.diarization else 0} segments, quality={diarization_validation.score:.2f}")
+
+            # Record AssemblyAI diarization cost
+            if self.enable_cost_tracking and self.cost_tracker and state.diarization and state.diarization.total_duration > 0:
+                try:
+                    await self.cost_tracker.record_assemblyai_call(
+                        state.session_id,
+                        audio_minutes=state.diarization.total_duration / 60.0,
+                        with_diarization=True,
+                        user_id=state.user_id
+                    )
+                except Exception as e:
+                    print(f"[CostTracker] AssemblyAI record failed (non-fatal): {e}")
 
             if diarization_validation.status == ValidationStatus.FAILED:
                 state.add_error("diarization", f"Quality gate failed: {diarization_validation.issues}")
@@ -446,6 +460,21 @@ class MedJourneePipeline:
                 logger=logger
             )
             summarization_duration = (time.time() - summarization_start) * 1000
+
+            # Record GPT-4 summarization cost
+            if self.enable_cost_tracking and self.cost_tracker and state.summarization and state.summarization.success:
+                try:
+                    total_chars = sum(len(s.text) for s in state.translated_segments)
+                    est_input_tokens = max(total_chars // 4, 100)
+                    est_output_tokens = 800  # typical journal entry output
+                    await self.cost_tracker.record_gpt4_call(
+                        state.session_id,
+                        input_tokens=est_input_tokens,
+                        output_tokens=est_output_tokens,
+                        user_id=state.user_id
+                    )
+                except Exception as e:
+                    print(f"[CostTracker] GPT-4 record failed (non-fatal): {e}")
 
             # Quality gate
             summarization_validation = self.validator.validate_summarization(state.summarization)
@@ -722,7 +751,9 @@ class MedJourneePipeline:
         provider_translate_to: str = "vi",
         family_spoken: str = "vi",
         family_translate_to: str = "en",
-        family_id: str = ""
+        family_id: str = "",
+        session_id: str = "",
+        user_id: str = ""
     ) -> InstantTranscribeResponse:
         """
         Fast transcription + translation for real-time display.
@@ -744,6 +775,17 @@ class MedJourneePipeline:
                     has_speech=False,
                     detected_language=transcription.detected_language
                 )
+
+            # Record Whisper cost (best-effort, only when session_id is provided)
+            if self.enable_cost_tracking and self.cost_tracker and session_id:
+                try:
+                    await self.cost_tracker.record_whisper_call(
+                        session_id,
+                        audio_minutes=transcription.duration_seconds / 60.0,
+                        user_id=user_id
+                    )
+                except Exception as e:
+                    print(f"[CostTracker] Whisper record failed (non-fatal): {e}")
 
             # Determine translation target based on detected language only
             # (we never assume role from language — multiple people may be in the room)
@@ -829,8 +871,10 @@ async def process_audio(
 
 async def instant_transcribe(
     audio_file,
+    session_id: str = "",
+    user_id: str = "",
     **kwargs
 ) -> InstantTranscribeResponse:
     """Convenience function for instant transcription"""
     pipeline = get_pipeline()
-    return await pipeline.instant_transcribe(audio_file, **kwargs)
+    return await pipeline.instant_transcribe(audio_file, session_id=session_id, user_id=user_id, **kwargs)

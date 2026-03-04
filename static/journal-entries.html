@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
+    <title>MedJournee - Journal Entries</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            padding-top: calc(16px + env(safe-area-inset-top));
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px 8px 4px 0;
+            line-height: 1;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .content {
+            padding: 16px 20px;
+            padding-bottom: calc(32px + env(safe-area-inset-bottom));
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .entry-card {
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .entry-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .entry-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .entry-summary {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .entry-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn-view {
+            flex: 1;
+            padding: 8px;
+            background: rgba(74,144,226,0.2);
+            border: 1px solid rgba(74,144,226,0.3);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            flex: 1;
+            padding: 8px;
+            background: rgba(239,83,80,0.15);
+            border: 1px solid rgba(239,83,80,0.3);
+            border-radius: var(--radius-sm);
+            color: #ef5350;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <button class="back-btn" onclick="window.location.href='/static/mobile.html'">&#8592;</button>
+        <span class="page-title">Journal Entries</span>
+    </div>
+
+    <div class="content" id="content">
+        <div class="loading">Loading journal entries...</div>
+    </div>
+
+    <script src="/static/js/config.js"></script>
+    <script>
+        const USER_ID = localStorage.getItem('userId') || localStorage.getItem('familyId') || 'user-001';
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadJournalEntries() {
+            const content = document.getElementById('content');
+            try {
+                const response = await fetch(`${API_BASE}/live-session/list-journal-entries/${USER_ID}`);
+                const result = await response.json();
+
+                if (!result.success || !result.journal_entries || result.journal_entries.length === 0) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">&#127908;</div>
+                            <h3>No Journal Entries Yet</h3>
+                            <p>Record a medical visit to keep track of important information.</p>
+                        </div>`;
+                    return;
+                }
+
+                content.innerHTML = result.journal_entries.map(entry => `
+                    <div class="entry-card" id="entry-${entry.session_id}">
+                        <div class="entry-date">${formatDate(entry.date)}</div>
+                        <div class="entry-title">${escapeHtml(entry.visit_type || 'Medical Visit')} &mdash; ${escapeHtml(entry.provider || 'Healthcare Provider')}</div>
+                        <div class="entry-summary">${escapeHtml(entry.summary || 'Medical visit completed.')}</div>
+                        <div class="entry-actions">
+                            <button class="btn-view" onclick="viewEntry('${entry.session_id}')">View</button>
+                            <button class="btn-delete" onclick="deleteEntry('${entry.session_id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (e) {
+                content.innerHTML = `<div class="empty-state"><div class="empty-icon">&#127908;</div><p>Could not load journal entries.</p></div>`;
+            }
+        }
+
+        function viewEntry(sessionId) {
+            window.location.href = `/static/entry.html?session=${sessionId}`;
+        }
+
+        async function deleteEntry(sessionId) {
+            if (!confirm('Delete this journal entry? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/live-session/delete-journal/${sessionId}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    const card = document.getElementById(`entry-${sessionId}`);
+                    if (card) card.remove();
+                    if (document.getElementById('content').querySelectorAll('.entry-card').length === 0) {
+                        document.getElementById('content').innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-icon">&#127908;</div>
+                                <h3>No Journal Entries Yet</h3>
+                                <p>Record a medical visit to keep track of important information.</p>
+                            </div>`;
+                    }
+                } else {
+                    alert('Failed to delete entry.');
+                }
+            } catch (e) {
+                alert('Network error.');
+            }
+        }
+
+        window.addEventListener('load', loadJournalEntries);
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
+</body>
+</html>

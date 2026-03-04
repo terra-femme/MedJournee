@@ -1,0 +1,49 @@
+name: Loop 2 — Semgrep Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  semgrep:
+    name: Semgrep Scan
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+
+    # Only run on PRs from the same repo (not forks) to avoid secret exposure
+    if: github.actor != 'dependabot[bot]'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        id: semgrep
+        run: |
+          semgrep ci \
+            --config=p/python \
+            --config=p/security-audit \
+            --config=p/owasp-top-ten \
+            --config=p/jwt \
+            --config=p/secrets \
+            --sarif \
+            --output=semgrep-results.sarif
+        continue-on-error: true  # Upload SARIF even on failure; step shows as failed in UI
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep
+
+      - name: Upload Semgrep report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-report-${{ github.sha }}
+          path: semgrep-results.sarif
+          retention-days: 90

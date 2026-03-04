@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from routes import transcribe, translate, tts, journal, combined_translation, live_translation
-from routes import realtime_routes, enrollment, appointments, talking_points
+from routes import realtime_routes, enrollment, appointments, talking_points, costs
 import asyncio
 import os
 
@@ -68,6 +68,7 @@ app.add_middleware(
     allow_origins=[
         "https://medjournee-backend.onrender.com",  # Render PWA frontend
         "http://localhost:8000",             # Local development
+        "http://127.0.0.1:8000",             # Local development (IP address)
         "http://localhost:3000",             # Local development alternative
         "http://localhost:8080",             # Local development alternative
     ],
@@ -89,6 +90,7 @@ app.include_router(realtime_routes.router, prefix="/realtime", tags=["Real-time 
 app.include_router(enrollment.router, prefix="/enrollment", tags=["Voice Enrollment"])
 app.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
 app.include_router(talking_points.router, prefix="/talking-points", tags=["Talking Points"])
+app.include_router(costs.router, prefix="/costs", tags=["Cost Tracking"])
 
 
 @app.get("/sw.js")
@@ -105,6 +107,13 @@ async def serve_service_worker():
 async def serve_html():
     """Serve the main application"""
     html_path = os.path.join("static", "mobile.html")
+    return FileResponse(html_path)
+
+
+@app.get("/costs-dashboard")
+async def serve_costs_dashboard():
+    """Serve the API cost dashboard page"""
+    html_path = os.path.join("static", "costs.html")
     return FileResponse(html_path)
 
 
@@ -230,4 +239,4 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # nosec B104 — dev-only block, not used in production

@@ -1,0 +1,91 @@
+name: Loop 1 — Security Scan
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history needed for secrets scan
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml] pip-audit detect-secrets safety
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      # Step 1: Secrets detection
+      - name: Detect secrets
+        id: detect-secrets
+        run: |
+          detect-secrets scan --baseline .secrets.baseline
+          detect-secrets audit .secrets.baseline --report
+        continue-on-error: false  # HARD FAIL — secrets in code = immediate block
+
+      # Step 2: Python SAST
+      - name: Bandit SAST scan
+        id: bandit
+        run: |
+          bandit -r . -c .bandit -f json -o bandit-report.json -ll || true
+          bandit -r . -c .bandit -ll
+        continue-on-error: false  # HARD FAIL on medium+ findings
+
+      # Step 3: Dependency CVE scan
+      - name: pip-audit CVE scan
+        id: pip-audit
+        run: |
+          pip-audit --format=json --output=pip-audit-report.json || true
+          pip-audit
+        continue-on-error: false  # HARD FAIL on known CVEs
+
+      # Step 4: Safety check (different vulnerability database)
+      - name: Safety dependency check
+        id: safety
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check
+        continue-on-error: true  # SOFT FAIL — safety has more false positives
+
+      # Step 5: Upload reports as artifacts (creates audit trail for HIPAA)
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports-${{ github.sha }}
+          path: |
+            bandit-report.json
+            pip-audit-report.json
+            safety-report.json
+          retention-days: 90  # 90-day CI artifact retention
+
+      # Step 6: Summary in PR/commit
+      - name: Security scan summary
+        if: always()
+        run: |
+          echo "## Loop 1 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Tool | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| detect-secrets | ${{ steps.detect-secrets.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| bandit (SAST) | ${{ steps.bandit.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| pip-audit (CVEs) | ${{ steps.pip-audit.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| safety | ${{ steps.safety.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "Scanned at: $(date -u)" >> $GITHUB_STEP_SUMMARY

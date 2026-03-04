@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
+    <title>MedJournee - All Appointments</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            padding-top: calc(16px + env(safe-area-inset-top));
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px 8px 4px 0;
+            line-height: 1;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .new-btn {
+            background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-coral));
+            border: none;
+            border-radius: var(--radius-full);
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 7px 14px;
+            cursor: pointer;
+        }
+
+        .content {
+            padding: 16px 20px;
+            padding-bottom: calc(32px + env(safe-area-inset-bottom));
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .group-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin: 20px 0 8px;
+        }
+
+        .group-label:first-child { margin-top: 4px; }
+
+        /* Talking points — appended inside .appointment-card */
+        .talking-points {
+            margin-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 10px;
+        }
+
+        .talking-points-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--sunset-peach);
+            margin-bottom: 6px;
+        }
+
+        .talking-point-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .tp-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255,140,66,0.6);
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+
+        .tp-dot.done { background: rgba(76,175,80,0.6); }
+
+        .tp-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .tp-text.done {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        /* Action buttons — sit below card content */
+        .appt-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .appt-card-actions button {
+            flex: 1;
+            padding: 7px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-edit {
+            background: rgba(74,144,226,0.15);
+            border: 1px solid rgba(74,144,226,0.3);
+            color: var(--text-primary);
+        }
+
+        .btn-delete {
+            background: rgba(239,83,80,0.12);
+            border: 1px solid rgba(239,83,80,0.3);
+            color: #ef5350;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <button class="back-btn" onclick="window.location.href='/static/mobile.html'">&#8592;</button>
+        <span class="page-title">All Appointments</span>
+        <button class="new-btn" onclick="window.location.href='/static/appointment.html'">+ New</button>
+    </div>
+
+    <div class="content" id="content">
+        <div class="loading">Loading appointments...</div>
+    </div>
+
+    <script src="/static/js/config.js"></script>
+    <script>
+        const USER_ID = localStorage.getItem('userId') || localStorage.getItem('familyId') || 'user-001';
+        const FAMILY_ID = localStorage.getItem('familyId') || 'family-001';
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function formatTime(t) {
+            if (!t) return '';
+            const [h, m] = t.split(':');
+            const hr = parseInt(h);
+            return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        function renderTalkingPoints(points) {
+            if (!points || points.length === 0) return '';
+            return `
+                <div class="talking-points">
+                    <div class="talking-points-label">Things to Mention</div>
+                    ${points.map(p => `
+                        <div class="talking-point-row">
+                            <div class="tp-dot ${p.done ? 'done' : ''}"></div>
+                            <div class="tp-text ${p.done ? 'done' : ''}">${escapeHtml(p.text)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderCard(appt, points, isPast) {
+            const timeStr = appt.scheduled_time ? ' &#8226; ' + formatTime(appt.scheduled_time) : '';
+            const provider = appt.provider_name ? escapeHtml(appt.provider_name) : '';
+            const type = appt.appointment_type ? escapeHtml(appt.appointment_type) : '';
+            const meta = [provider, type].filter(Boolean).join(' &bull; ');
+
+            return `
+                <div class="appointment-card${isPast ? ' past' : ''}" id="appt-${appt.id}"
+                     onclick="window.location.href='/static/appointment.html?id=${appt.id}'">
+                    <div class="appointment-date">${formatDate(appt.scheduled_date)}${timeStr}</div>
+                    <div class="appointment-title">${escapeHtml(appt.title)}</div>
+                    ${meta ? `<div class="appointment-provider">${meta}</div>` : ''}
+                    ${renderTalkingPoints(points)}
+                    <div class="appt-card-actions">
+                        <button class="btn-edit" onclick="event.stopPropagation(); window.location.href='/static/appointment.html?id=${appt.id}'">Edit</button>
+                        <button class="btn-delete" onclick="event.stopPropagation(); deleteAppt('${appt.id}')">Delete</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadAll() {
+            const content = document.getElementById('content');
+            try {
+                const res = await fetch(`${API_BASE}/appointments/list/${USER_ID}?limit=200`);
+                const result = await res.json();
+
+                if (!result.success || !result.appointments || result.appointments.length === 0) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">&#128197;</div>
+                            <h3>No Appointments</h3>
+                            <p>Tap + New to schedule your first appointment.</p>
+                        </div>`;
+                    return;
+                }
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const upcoming = result.appointments
+                    .filter(a => new Date(a.scheduled_date + 'T00:00:00') >= today)
+                    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+
+                const past = result.appointments
+                    .filter(a => new Date(a.scheduled_date + 'T00:00:00') < today)
+                    .sort((a, b) => b.scheduled_date.localeCompare(a.scheduled_date));
+
+                // Fetch talking points for all appointments in parallel
+                const allAppts = [...upcoming, ...past];
+                const pointsResults = await Promise.all(
+                    allAppts.map(a =>
+                        fetch(`${API_BASE}/talking-points/appointment/${a.id}`)
+                            .then(r => r.json())
+                            .catch(() => ({ success: false, talking_points: [] }))
+                    )
+                );
+                const pointsMap = {};
+                allAppts.forEach((a, i) => {
+                    pointsMap[a.id] = pointsResults[i].talking_points || [];
+                });
+
+                let html = '';
+
+                if (upcoming.length > 0) {
+                    html += `<div class="group-label">Upcoming</div>`;
+                    html += upcoming.map(a => renderCard(a, pointsMap[a.id], false)).join('');
+                }
+
+                if (past.length > 0) {
+                    html += `<div class="group-label">Past</div>`;
+                    html += past.map(a => renderCard(a, pointsMap[a.id], true)).join('');
+                }
+
+                content.innerHTML = html;
+
+            } catch (e) {
+                content.innerHTML = `<div class="empty-state"><div class="empty-icon">&#128197;</div><p>Could not load appointments.</p></div>`;
+            }
+        }
+
+        async function deleteAppt(id) {
+            if (!confirm('Delete this appointment? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/appointments/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    const card = document.getElementById(`appt-${id}`);
+                    if (card) card.remove();
+                } else {
+                    alert('Failed to delete appointment.');
+                }
+            } catch (e) {
+                alert('Network error.');
+            }
+        }
+
+        window.addEventListener('load', loadAll);
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
+</body>
+</html>

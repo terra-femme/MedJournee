@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
     <title>MedJournee - Medical Journal</title>
-    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <link rel="stylesheet" href="/static/css/neuglass.css?v=3">
     <style>
         /* Calendar Styles (page-specific) */
         .calendar-container {
@@ -20,9 +20,10 @@
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             padding: 16px;
-            margin: 0;
+            margin: 12px;
+            border-radius: var(--radius-lg);
             box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .calendar-header {
@@ -213,8 +214,159 @@
             box-shadow: 0 4px 20px rgba(255, 140, 66, 0.3);
         }
 
-        .things-to-mention-section .section-title {
-            color: var(--sunset-peach) !important;
+        /* Talking points inline inside appointment cards */
+        .talking-points {
+            margin-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 8px;
+        }
+
+        .talking-points-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--sunset-peach);
+            margin-bottom: 6px;
+        }
+
+        .talking-point-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 3px 0;
+        }
+
+        .tp-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255,140,66,0.6);
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+
+        .tp-dot.done { background: rgba(76,175,80,0.6); }
+
+        .tp-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .tp-text.done {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        .appt-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .appt-card-actions button {
+            flex: 1;
+            padding: 6px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+        }
+
+        .appt-btn-edit {
+            background: rgba(74,144,226,0.15);
+            border-color: rgba(74,144,226,0.3) !important;
+            color: var(--text-primary);
+        }
+
+        .appt-btn-delete {
+            background: rgba(239,83,80,0.12);
+            border-color: rgba(239,83,80,0.3) !important;
+            color: #ef5350;
+        }
+
+        /* Cost widget on home page */
+        .cost-widget {
+            padding: 0 16px 16px;
+        }
+
+        .cost-widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .cost-widget-title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .cost-widget-link {
+            font-size: 12px;
+            color: var(--sunset-peach);
+            text-decoration: none;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .cost-cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .cost-mini-card {
+            background: var(--glass-light);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-md);
+            padding: 12px;
+        }
+
+        .cost-mini-icon { font-size: 16px; margin-bottom: 4px; }
+
+        .cost-mini-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .cost-mini-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .cost-mini-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .cost-widget-pulse {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--color-success);
+            border-radius: 50%;
+            margin-right: 4px;
+            animation: widgetPulse 2s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes widgetPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
     </style>
 </head>
@@ -262,6 +414,20 @@
                 </div>
                 <span class="nav-arrow">&#8250;</span>
             </div>
+            <div class="nav-item" onclick="window.location.href='/static/journal-entries.html'">
+                <div class="nav-item-content">
+                    <span class="nav-icon">&#128211;</span>
+                    <span class="nav-label">Journal Entries</span>
+                </div>
+                <span class="nav-arrow">&#8250;</span>
+            </div>
+            <div class="nav-item" onclick="window.location.href='/static/past-appointments.html'">
+                <div class="nav-item-content">
+                    <span class="nav-icon">&#128197;</span>
+                    <span class="nav-label">Past Appointments</span>
+                </div>
+                <span class="nav-arrow">&#8250;</span>
+            </div>
             <div class="nav-item" onclick="alert('Coming soon')">
                 <div class="nav-item-content">
                     <span class="nav-icon">&#128248;</span>
@@ -294,6 +460,13 @@
                 </div>
                 <span class="nav-arrow">&#8250;</span>
             </div>
+            <div class="nav-item" onclick="window.location.href='/costs-dashboard'">
+                <div class="nav-item-content">
+                    <span class="nav-icon">&#128200;</span>
+                    <span class="nav-label">Usage &amp; Cost</span>
+                </div>
+                <span class="nav-arrow">&#8250;</span>
+            </div>
             <div class="nav-item" onclick="alert('Settings coming soon')">
                 <div class="nav-item-content">
                     <span class="nav-icon">&#9881;</span>
@@ -322,17 +495,6 @@
             </div>
         </div>
 
-        <!-- Things to Mention Section (Prominent) -->
-        <div class="section things-to-mention-section" id="thingsToMentionSection" style="display: none;">
-            <div class="section-header">
-                <span class="section-title" style="color: #e65100;">Things to Mention</span>
-                <span class="mention-count" id="mentionCount"></span>
-            </div>
-            <div id="thingsToMentionContainer">
-                <!-- Talking points will be rendered here -->
-            </div>
-        </div>
-
         <!-- Upcoming Appointments Section -->
         <div class="section">
             <div class="section-header">
@@ -346,17 +508,6 @@
             </div>
         </div>
 
-        <!-- Past Appointments Section (Collapsible) -->
-        <div class="section">
-            <div class="section-header">
-                <span class="section-title">Past Appointments</span>
-                <button class="section-toggle" id="pastToggle" onclick="toggleSection('past')">&#9660;</button>
-            </div>
-            <div class="section-content" id="pastContent">
-                <div id="pastContainer"></div>
-            </div>
-        </div>
-
         <!-- Recent Journal Entries Section (Collapsible) -->
         <div class="section">
             <div class="section-header">
@@ -365,6 +516,21 @@
             </div>
             <div class="section-content" id="entriesContent">
                 <div id="entriesContainer"></div>
+            </div>
+        </div>
+
+        <!-- API Cost Widget -->
+        <div class="cost-widget">
+            <div class="cost-widget-header">
+                <span class="cost-widget-title">
+                    <span class="cost-widget-pulse"></span>API Usage
+                </span>
+                <button class="cost-widget-link" onclick="window.location.href='/costs-dashboard'">View details &#8250;</button>
+            </div>
+            <div class="cost-cards-grid" id="costWidgetGrid">
+                <!-- Skeleton cards -->
+                <div class="cost-mini-card"><div class="cost-mini-label">Loading...</div></div>
+                <div class="cost-mini-card"><div class="cost-mini-label">Loading...</div></div>
             </div>
         </div>
     </div>
@@ -394,10 +560,10 @@
         <button class="fab fab-secondary" onclick="window.location.href='/enroll'">&#128100;</button>
     </div>
 
+    <script src="/static/js/config.js"></script>
     <script>
-        const API_BASE = 'https://terra.tail8736aa.ts.net';  // Tailscale Serve HTTPS URL
-        const USER_ID = 'user-001';
-        const FAMILY_ID = 'family-001';
+        const USER_ID = localStorage.getItem('userId') || localStorage.getItem('familyId') || 'user-001';
+        const FAMILY_ID = localStorage.getItem('familyId') || 'family-001';
 
         // Calendar state
         let currentDate = new Date();
@@ -410,10 +576,9 @@
             await Promise.all([
                 loadMonthAppointments(),
                 loadUpcomingAppointments(),
-                loadThingsToMention(),
-                loadPastAppointments(),
                 loadJournalEntries()
             ]);
+            loadCostWidget();
         });
 
         // Navigation drawer
@@ -588,135 +753,45 @@
 
         async function loadUpcomingAppointments() {
             const container = document.getElementById('upcomingContainer');
+            const emptyHtml = `
+                <div class="empty-state">
+                    <div class="empty-icon">&#128197;</div>
+                    <h3>No Upcoming Appointments</h3>
+                    <p>Stay on top of your medical visits</p>
+                    <button onclick="openNewAppointment()" style="margin-top: 12px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
+                        + Schedule Appointment
+                    </button>
+                </div>`;
 
             try {
                 const response = await fetch(`${API_BASE}/appointments/upcoming/${USER_ID}?limit=5`);
                 const result = await response.json();
 
-                if (result.success && result.appointments.length > 0) {
-                    container.innerHTML = result.appointments.map(appt => createAppointmentCard(appt)).join('');
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">&#128197;</div>
-                            <h3>No Upcoming Appointments</h3>
-                            <p>Stay on top of your medical visits</p>
-                            <button onclick="openNewAppointment()" style="margin-top: 12px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
-                                + Schedule Appointment
-                            </button>
-                        </div>
-                    `;
+                if (!result.success || !result.appointments || result.appointments.length === 0) {
+                    container.innerHTML = emptyHtml;
+                    return;
                 }
+
+                // Fetch talking points for all upcoming appointments in parallel
+                const pointsResults = await Promise.all(
+                    result.appointments.map(a =>
+                        fetch(`${API_BASE}/talking-points/appointment/${a.id}`)
+                            .then(r => r.json())
+                            .catch(() => ({ talking_points: [] }))
+                    )
+                );
+                const pointsMap = {};
+                result.appointments.forEach((a, i) => {
+                    pointsMap[a.id] = pointsResults[i].talking_points || [];
+                });
+
+                container.innerHTML = result.appointments
+                    .map(appt => createAppointmentCard(appt, false, pointsMap[appt.id]))
+                    .join('');
+
             } catch (error) {
                 console.error('Failed to load upcoming appointments:', error);
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">&#128197;</div>
-                        <h3>No Upcoming Appointments</h3>
-                        <p>Stay on top of your medical visits</p>
-                        <button onclick="openNewAppointment()" style="margin-top: 12px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 20px; font-size: 14px; cursor: pointer;">
-                            + Schedule Appointment
-                        </button>
-                    </div>
-                `;
-            }
-        }
-
-        // Load all talking points from upcoming appointments
-        async function loadThingsToMention() {
-            const section = document.getElementById('thingsToMentionSection');
-            const container = document.getElementById('thingsToMentionContainer');
-            const countBadge = document.getElementById('mentionCount');
-
-            try {
-                // Get upcoming appointments with their talking points
-                const response = await fetch(`${API_BASE}/appointments/upcoming/${USER_ID}?limit=10`);
-                const result = await response.json();
-
-                if (!result.success || !result.appointments) {
-                    section.style.display = 'none';
-                    return;
-                }
-
-                // Collect all unchecked talking points
-                let allPoints = [];
-
-                for (const appt of result.appointments) {
-                    // Fetch talking points for each appointment
-                    try {
-                        const pointsResponse = await fetch(`${API_BASE}/talking-points/appointment/${appt.id}`);
-                        const pointsResult = await pointsResponse.json();
-
-                        if (pointsResult.success && pointsResult.talking_points) {
-                            const unchecked = pointsResult.talking_points.filter(p => !p.done);
-                            unchecked.forEach(p => {
-                                allPoints.push({
-                                    ...p,
-                                    appointmentTitle: appt.title,
-                                    appointmentDate: appt.scheduled_date,
-                                    appointmentId: appt.id
-                                });
-                            });
-                        }
-                    } catch (e) {
-                        console.error('Failed to load points for appointment:', appt.id);
-                    }
-                }
-
-                if (allPoints.length === 0) {
-                    section.style.display = 'none';
-                    return;
-                }
-
-                // Show section
-                section.style.display = 'block';
-                countBadge.textContent = `${allPoints.length} items`;
-
-                // Render items
-                container.innerHTML = allPoints.map(point => {
-                    const date = new Date(point.appointmentDate + 'T00:00:00');
-                    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                    return `
-                        <div class="mention-item" onclick="openAppointment('${point.appointmentId}')">
-                            <div class="mention-checkbox" onclick="event.stopPropagation(); toggleMentionItem('${point.id}', this)"></div>
-                            <div class="mention-content">
-                                <div class="mention-text">${escapeHtml(point.text)}</div>
-                                <div class="mention-appointment">
-                                    ${dateStr} - ${point.appointmentTitle}
-                                    ${point.priority === 'high' ? '<span class="mention-badge">Important</span>' : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error('Failed to load things to mention:', error);
-                section.style.display = 'none';
-            }
-        }
-
-        async function toggleMentionItem(pointId, element) {
-            try {
-                const response = await fetch(`${API_BASE}/talking-points/${pointId}/toggle`, {
-                    method: 'PUT'
-                });
-                const result = await response.json();
-
-                if (result.success) {
-                    if (result.done) {
-                        element.classList.add('checked');
-                        element.closest('.mention-item').querySelector('.mention-text').classList.add('done');
-                    } else {
-                        element.classList.remove('checked');
-                        element.closest('.mention-item').querySelector('.mention-text').classList.remove('done');
-                    }
-                    // Reload to update count
-                    setTimeout(() => loadThingsToMention(), 500);
-                }
-            } catch (error) {
-                console.error('Failed to toggle item:', error);
+                container.innerHTML = emptyHtml;
             }
         }
 
@@ -757,7 +832,7 @@
                 const result = await response.json();
 
                 if (result.success && result.journal_entries && result.journal_entries.length > 0) {
-                    container.innerHTML = result.journal_entries.slice(0, 5).map(entry => createEntryCard(entry)).join('');
+                    container.innerHTML = result.journal_entries.slice(0, 1).map(entry => createEntryCard(entry)).join('');
                 } else {
                     container.innerHTML = `
                         <div class="empty-state">
@@ -784,20 +859,58 @@
             }
         }
 
-        function createAppointmentCard(appt, isPast = false) {
+        function renderTalkingPoints(points) {
+            if (!points || points.length === 0) return '';
+            return `
+                <div class="talking-points">
+                    <div class="talking-points-label">Things to Mention</div>
+                    ${points.map(p => `
+                        <div class="talking-point-row">
+                            <div class="tp-dot${p.done ? ' done' : ''}"></div>
+                            <div class="tp-text${p.done ? ' done' : ''}">${escapeHtml(p.text)}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+
+        function createAppointmentCard(appt, isPast = false, points = []) {
             const date = new Date(appt.scheduled_date + 'T00:00:00');
             const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            const timeStr = appt.scheduled_time ? formatTime(appt.scheduled_time) : 'All day';
-            const pointsCount = appt.talking_points_count || 0;
+            const timeStr = appt.scheduled_time ? formatTime(appt.scheduled_time) : '';
 
             return `
-                <div class="appointment-card ${isPast ? 'past' : ''}" onclick="openAppointment('${appt.id}')">
-                    <div class="appointment-date">${dateStr} ${appt.scheduled_time ? '&#8226; ' + timeStr : ''}</div>
+                <div class="appointment-card ${isPast ? 'past' : ''}" id="appt-card-${appt.id}"
+                     onclick="openAppointment('${appt.id}')">
+                    <div class="appointment-date">${dateStr}${timeStr ? ' &#8226; ' + timeStr : ''}</div>
                     <div class="appointment-title">${appt.title}</div>
                     ${appt.provider_name ? `<div class="appointment-provider">${appt.provider_name}</div>` : ''}
-                    ${pointsCount > 0 ? `<div class="appointment-points">${pointsCount} talking point${pointsCount > 1 ? 's' : ''}</div>` : ''}
+                    ${renderTalkingPoints(points)}
+                    <div class="appt-card-actions">
+                        <button class="appt-btn-edit" onclick="event.stopPropagation(); editAppt('${appt.id}')">Edit</button>
+                        <button class="appt-btn-delete" onclick="event.stopPropagation(); deleteAppt('${appt.id}')">Delete</button>
+                    </div>
                 </div>
             `;
+        }
+
+        function editAppt(id) {
+            window.location.href = `/static/appointment.html?id=${id}`;
+        }
+
+        async function deleteAppt(id) {
+            if (!confirm('Delete this appointment? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/appointments/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    const card = document.getElementById(`appt-card-${id}`);
+                    if (card) card.remove();
+                } else {
+                    alert('Failed to delete appointment.');
+                }
+            } catch (e) {
+                alert('Network error.');
+            }
         }
 
         function createEntryCard(entry) {
@@ -908,8 +1021,7 @@
         }
 
         function showAllAppointments() {
-            alert('All appointments view coming soon');
-            toggleDrawer();
+            window.location.href = '/static/all-appointments.html';
         }
 
         function filterEntries(type) {
@@ -922,6 +1034,64 @@
             if (e.target.classList.contains('modal-overlay')) {
                 closeDayModal();
             }
+        });
+
+        // ── Cost widget ──────────────────────────────────────────────────────
+        function fmtCost(usd) {
+            if (usd === 0) return 'Free';
+            if (usd < 0.01) return `${(usd * 100).toFixed(3)}¢`;
+            if (usd < 1)    return `${(usd * 100).toFixed(1)}¢`;
+            return `$${usd.toFixed(2)}`;
+        }
+
+        async function loadCostWidget() {
+            try {
+                const res = await fetch(`${API_BASE}/costs/summary/${USER_ID}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed');
+
+                const providerIcons = { openai: '🤖', assemblyai: '🎙️', google: '🌐' };
+                const providerNames = { openai: 'OpenAI', assemblyai: 'AssemblyAI', google: 'Google' };
+
+                const providers = Object.entries(data.by_provider).sort((a, b) => b[1] - a[1]);
+
+                // Total card + per-provider cards
+                const cards = [
+                    `<div class="cost-mini-card">
+                        <div class="cost-mini-icon">💰</div>
+                        <div class="cost-mini-label">Total so far</div>
+                        <div class="cost-mini-value">${fmtCost(data.total_usd)}</div>
+                        <div class="cost-mini-sub">${data.session_count} session${data.session_count !== 1 ? 's' : ''}</div>
+                    </div>`,
+                    `<div class="cost-mini-card">
+                        <div class="cost-mini-icon">📅</div>
+                        <div class="cost-mini-label">This month</div>
+                        <div class="cost-mini-value">${fmtCost(data.this_month_usd)}</div>
+                        <div class="cost-mini-sub">Calendar month</div>
+                    </div>`,
+                    ...providers.map(([key, cost]) =>
+                        `<div class="cost-mini-card">
+                            <div class="cost-mini-icon">${providerIcons[key] || '📦'}</div>
+                            <div class="cost-mini-label">${providerNames[key] || key}</div>
+                            <div class="cost-mini-value">${fmtCost(cost)}</div>
+                            <div class="cost-mini-sub">${key === 'google' ? 'Free tier' : 'API cost'}</div>
+                        </div>`
+                    )
+                ];
+
+                document.getElementById('costWidgetGrid').innerHTML = cards.join('');
+            } catch (e) {
+                document.getElementById('costWidgetGrid').innerHTML =
+                    `<div class="cost-mini-card" style="grid-column:span 2; text-align:center; color:var(--text-muted); font-size:12px;">
+                        Could not load cost data
+                    </div>`;
+            }
+        }
+
+        // Refresh widget every 30s and on tab focus
+        setInterval(loadCostWidget, 30000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) loadCostWidget();
         });
     </script>
     <script>

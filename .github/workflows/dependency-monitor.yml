@@ -1,0 +1,59 @@
+name: Loop 4 — Weekly Dependency Health Monitor
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday 9am UTC
+  workflow_dispatch:
+
+jobs:
+  dependency-audit:
+    name: Dependency CVE Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install audit tools
+        run: pip install pip-audit safety
+
+      - name: Install project dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: pip-audit CVE scan
+        id: pip-audit
+        run: |
+          pip-audit --format=json --output=pip-audit-weekly.json || true
+          pip-audit
+        continue-on-error: true
+
+      - name: Safety scan
+        id: safety
+        run: safety scan || true
+        continue-on-error: true
+
+      - name: Upload weekly audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-audit-${{ github.run_number }}
+          path: pip-audit-weekly.json
+          retention-days: 365
+
+      - name: Open issue if vulnerabilities found
+        if: steps.pip-audit.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Loop 4] Dependency vulnerability detected - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Weekly dependency scan found vulnerabilities\n\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nCheck the workflow artifacts for the full pip-audit report.\n\n**Action required:** Review and update affected packages before next deploy.`,
+              labels: ['security', 'dependencies']
+            })

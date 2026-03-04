@@ -144,14 +144,18 @@ body {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   padding: 15px;
   padding-top: max(15px, env(safe-area-inset-top));
+  margin: 0 12px 12px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   position: sticky;
   top: 0;
   z-index: 100;
+  overflow: hidden;
 }
 
 .header-title {
@@ -1122,6 +1126,8 @@ select.form-input,
   -webkit-backdrop-filter: blur(24px);
   box-shadow: 2px 0 30px rgba(0, 0, 0, 0.4);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-right-radius: var(--radius-xl);
+  border-bottom-right-radius: var(--radius-xl);
   transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1000;
   overflow-y: auto;
@@ -1170,7 +1176,9 @@ select.form-input,
 }
 
 .nav-item {
-  padding: 16px 20px;
+  padding: 12px 16px;
+  margin: 2px 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1181,7 +1189,7 @@ select.form-input,
 
 .nav-item:hover {
   background: rgba(255, 140, 66, 0.08);
-  padding-left: 24px;
+  padding-left: 20px;
 }
 
 .nav-item-content {
