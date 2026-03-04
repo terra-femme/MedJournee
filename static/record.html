@@ -276,7 +276,7 @@
 
     <div class="recording-section">
         <span class="status-badge live" id="statusBadge" style="display: none;">LIVE</span>
-        
+
         <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
             TAP TO<br>START
         </button>
@@ -430,9 +430,9 @@
         </div>
     </div>
 
+    <script src="/static/js/config.js"></script>
     <script>
-        const API_BASE = 'https://terra.tail8736aa.ts.net';  // Tailscale Serve HTTPS URL
-        const USER_ID = 'user-001';
+        const USER_ID = localStorage.getItem('userId') || localStorage.getItem('familyId') || 'user-001';
 
         // Get FAMILY_ID from input field (dynamic)
         function getFamilyId() {
@@ -668,7 +668,7 @@
         let seconds = 0;
         let sessionId = null;
         let isProcessingChunk = false;
-        
+
         // FIX: Track the last processed audio size to detect NEW content
         let lastProcessedSize = 0;
         let lastFullText = '';
@@ -689,12 +689,12 @@
 
         async function startRecording() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
+                const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true }
                 });
 
                 sessionId = `session-${Date.now()}`;
-                
+
                 let mimeType = 'audio/webm;codecs=opus';
                 if (!MediaRecorder.isTypeSupported(mimeType)) {
                     mimeType = 'audio/mp4';
@@ -737,7 +737,7 @@
         function stopRecording() {
             clearInterval(processInterval);
             clearInterval(timerInterval);
-            
+
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
@@ -762,10 +762,10 @@
             if (allAudioChunks.length < 3 || isProcessingChunk) return;
 
             isProcessingChunk = true;
-            
+
             // Create blob from ALL chunks (includes header from chunk 0)
             const audioBlob = new Blob(allAudioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
-            
+
             // Skip if audio hasn't grown enough since last process
             if (audioBlob.size < lastProcessedSize + 10000) {
                 isProcessingChunk = false;
@@ -916,7 +916,7 @@
             container.appendChild(segmentEl);
             container.scrollTop = container.scrollHeight;
         }
-        
+
         // Escape HTML to prevent XSS and encoding issues
         function escapeHtml(text) {
             const div = document.createElement('div');

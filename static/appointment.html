@@ -228,10 +228,10 @@
         pointer-events: none; z-index: 9999; white-space: nowrap;
     ">&#10003; Appointment saved</div>
 
+    <script src="/static/js/config.js"></script>
     <script>
-        const API_BASE = 'https://terra.tail8736aa.ts.net';  // Tailscale Serve HTTPS URL
-        const USER_ID = 'user-001';
-        const FAMILY_ID = 'family-001';
+        const USER_ID = localStorage.getItem('userId') || localStorage.getItem('familyId') || 'user-001';
+        const FAMILY_ID = localStorage.getItem('familyId') || 'family-001';
 
         // State
         let appointmentId = null;

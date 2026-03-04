@@ -1,0 +1,59 @@
+name: Loop 4 — Monthly Regulatory Monitor
+
+on:
+  schedule:
+    - cron: '0 9 1 * *'  # 1st of every month, 9am UTC
+  workflow_dispatch:
+
+jobs:
+  regulatory-check:
+    name: Regulatory Feed Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check FastAPI security advisories
+        run: |
+          echo "=== FastAPI Security Advisories ==="
+          curl -s "https://api.github.com/repos/tiangolo/fastapi/security-advisories" \
+            -H "Accept: application/vnd.github+json" \
+            | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          if isinstance(data, list) and data:
+              for item in data[:5]:
+                  print(f\"- {item.get('summary', 'N/A')} [{item.get('severity', 'N/A')}]\")
+          else:
+              print('No advisories found')
+          " || true
+
+      - name: Check SQLAlchemy security advisories
+        run: |
+          echo "=== SQLAlchemy Security Advisories ==="
+          curl -s "https://api.github.com/repos/sqlalchemy/sqlalchemy/security-advisories" \
+            -H "Accept: application/vnd.github+json" \
+            | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          if isinstance(data, list) and data:
+              for item in data[:5]:
+                  print(f\"- {item.get('summary', 'N/A')} [{item.get('severity', 'N/A')}]\")
+          else:
+              print('No advisories found')
+          " || true
+
+      - name: Generate monthly compliance summary
+        run: |
+          echo "## Monthly Regulatory Check - $(date +%Y-%m)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Automated checks completed.** Manual review required:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] [HHS HIPAA updates](https://www.hhs.gov/hipaa/for-professionals/index.html)" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] [FDA SaMD guidance](https://www.fda.gov/medical-devices/software-medical-device-samd)" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] [Florida FIPA Chapter 501](https://leg.state.fl.us/statutes/)" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Review GitHub Security tab for new CodeQL/Semgrep findings" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Review open Dependabot PRs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See \`docs/security/loop4_compliance_monitor.md\` for full checklist." >> $GITHUB_STEP_SUMMARY

@@ -8,8 +8,18 @@ from datetime import datetime
 from services.ai_journal_service import ai_journal_service
 from pydantic import BaseModel
 from services.database_service import database_service
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _sanitize_for_log(value: str) -> str:
+    """Strip newlines from user-controlled values before logging to prevent log injection."""
+    if not isinstance(value, str):
+        value = str(value)
+    return value.replace("\r", "").replace("\n", "")
+
 
 # In-memory session storage (replace with Redis/database in production)
 active_sessions: Dict[str, Dict] = {}
@@ -17,14 +27,14 @@ completed_sessions: Dict[str, Dict] = {}
 
 class LiveSessionManager:
     """Manages live translation sessions with automatic journal generation"""
-    
+
     def __init__(self):
         self.sessions = {}
-    
+
     def create_session(self, user_id: str, patient_name: str, family_id: str, target_language: str) -> str:
         """Create new live session"""
         session_id = str(uuid.uuid4())
-        
+
         session_data = {
             "session_id": session_id,
             "user_id": user_id,
@@ -37,21 +47,21 @@ class LiveSessionManager:
             "last_activity": datetime.now(),
             "journal_entry": None
         }
-        
+
         self.sessions[session_id] = session_data
         active_sessions[session_id] = session_data
-        
+
         return session_id
-    
+
     def add_segment(self, session_id: str, segment: Dict):
         """Add new transcribed segment to session"""
         if session_id in self.sessions:
             self.sessions[session_id]["speaker_segments"].append(segment)
             self.sessions[session_id]["last_activity"] = datetime.now()
-            
+
             # Auto-delete transcription after brief period (privacy)
             self._schedule_segment_cleanup(session_id, len(self.sessions[session_id]["speaker_segments"]) - 1)
-    
+
     def _schedule_segment_cleanup(self, session_id: str, segment_index: int):
         """Schedule deletion of raw transcription text for privacy"""
         import asyncio
@@ -66,18 +76,18 @@ class LiveSessionManager:
                         segments[segment_index]["original_text"] = "[DELETED FOR PRIVACY]"
             except:
                 pass
-        
+
         asyncio.create_task(cleanup())
-    
+
     async def end_session(self, session_id: str) -> Dict:
         """End session and generate journal entry"""
         if session_id not in self.sessions:
             return {"success": False, "error": "Session not found"}
-        
+
         session = self.sessions[session_id]
         session["status"] = "processing_journal"
         session["ended_at"] = datetime.now()
-        
+
         # Generate AI journal entry from collected segments
         try:
             patient_info = {
@@ -85,12 +95,12 @@ class LiveSessionManager:
                 "family_id": session["family_id"],
                 "preferred_language": session["target_language"]
             }
-            
+
             journal_result = await ai_journal_service.generate_medical_journal_entry(
-                session["speaker_segments"], 
+                session["speaker_segments"],
                 patient_info
             )
-            
+
             if journal_result["success"]:
                 session["journal_entry"] = journal_result["journal_entry"]
 
@@ -105,13 +115,13 @@ class LiveSessionManager:
 
                 session["confidence_score"] = journal_result["confidence_score"]
                 session["status"] = "completed"
-                
+
                 # Move to completed sessions
                 completed_sessions[session_id] = session
-                
+
                 # Clean up speaker segments for privacy (keep only journal)
                 session["speaker_segments"] = []  # Delete raw conversation
-                
+
                 return {
                     "success": True,
                     "journal_entry_id": session_id,
@@ -125,14 +135,14 @@ class LiveSessionManager:
                     "error": "Failed to generate journal entry",
                     "fallback_available": True
                 }
-                
+
         except Exception as e:
             session["status"] = "error"
             return {
                 "success": False,
                 "error": f"Journal generation error: {str(e)}"
             }
-    
+
     def get_session_journal(self, session_id: str) -> Dict:
         """Get the generated journal entry for a session"""
         if session_id in completed_sessions:
@@ -147,7 +157,7 @@ class LiveSessionManager:
                     "duration": str(session.get("ended_at", datetime.now()) - session["started_at"])
                 }
             }
-        
+
         return {"success": False, "error": "Journal entry not found"}
 
 # Global session manager
@@ -187,13 +197,13 @@ async def add_live_segment(
     segment_data: Dict
 ):
     """Add a transcribed segment to the live session"""
-    
+
     # Add timestamp if not present
     if "timestamp" not in segment_data:
         segment_data["timestamp"] = datetime.now().isoformat()
-    
+
     session_manager.add_segment(session_id, segment_data)
-    
+
     return {
         "success": True,
         "segment_added": True,
@@ -203,13 +213,13 @@ async def add_live_segment(
 @router.post("/end-live-session/{session_id}")
 async def end_live_session(session_id: str, background_tasks: BackgroundTasks):
     """End live session and generate journal entry automatically"""
-    
+
     result = await session_manager.end_session(session_id)
-    
+
     if result["success"]:
         # Clean up session data in background for privacy
         background_tasks.add_task(cleanup_session_data, session_id)
-    
+
     return result
 
 @router.get("/list-journal-entries/{user_id}")
@@ -218,7 +228,7 @@ async def list_user_journal_entries(user_id: str):
     try:
         # Get entries from DATABASE, not in-memory sessions
         entries = await database_service.list_user_journals(user_id, limit=50)
-        
+
         # Format for frontend
         user_entries = []
         for entry in entries:
@@ -230,7 +240,7 @@ async def list_user_journal_entries(user_id: str):
                 "provider": entry.get("provider_name", "Healthcare Provider"),
                 "summary": entry.get("visit_summary", "")
             })
-        
+
         return {
             "success": True,
             "journal_entries": user_entries,
@@ -249,15 +259,15 @@ async def cleanup_session_data(session_id: str):
     try:
         if session_id in active_sessions:
             del active_sessions[session_id]
-        
+
         # Keep completed journal but ensure no raw audio/text remains
         if session_id in completed_sessions:
             session = completed_sessions[session_id]
             session["speaker_segments"] = []  # Delete any remaining segments
             session["raw_data_deleted"] = True
-            
+
         print(f"Session {session_id} data cleaned for privacy compliance")
-        
+
     except Exception as e:
         print(f"Session cleanup error: {e}")
 
@@ -266,12 +276,12 @@ async def cleanup_session_data(session_id: str):
 async def websocket_live_journal(websocket: WebSocket, session_id: str):
     """WebSocket for live session updates with journal generation"""
     await websocket.accept()
-    
+
     try:
         while True:
             # Receive audio chunk or control message
             message = await websocket.receive_json()
-            
+
             if message.get("type") == "audio_segment":
                 # Process audio segment (existing logic)
                 # Then add to session
@@ -281,29 +291,29 @@ async def websocket_live_journal(websocket: WebSocket, session_id: str):
                     "translation": message.get("translation", ""),
                     "confidence": message.get("confidence", 0.8)
                 }
-                
+
                 session_manager.add_segment(session_id, segment_data)
-                
+
                 # Send acknowledgment
                 await websocket.send_json({
                     "type": "segment_processed",
                     "session_id": session_id,
                     "auto_journal_building": True
                 })
-                
+
             elif message.get("type") == "end_session":
                 # End session and generate journal
                 result = await session_manager.end_session(session_id)
-                
+
                 await websocket.send_json({
                     "type": "session_ended",
                     "journal_generated": result["success"],
                     "journal_entry_id": session_id if result["success"] else None,
                     "message": "Your medical visit journal entry has been created automatically!"
                 })
-                
+
                 break
-                
+
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for session {session_id}")
         # Auto-end session on disconnect
@@ -316,7 +326,7 @@ async def debug_entries(user_id: str):
     """Debug endpoint to check what's in the database"""
     try:
         entries = await database_service.list_user_journals(user_id, limit=50)
-        
+
         return {
             "count": len(entries),
             "entries": entries,
@@ -328,13 +338,13 @@ async def debug_entries(user_id: str):
             "count": 0,
             "entries": []
         }
-    
+
 @router.get("/get-journal/{session_id}")
 async def get_session_journal(session_id: str):
     """Get journal entry by session ID"""
     try:
         journal_entry = await database_service.get_journal_by_session(session_id)
-        
+
         if journal_entry:
             return {
                 "success": True,
@@ -346,12 +356,22 @@ async def get_session_journal(session_id: str):
                 "error": "Journal entry not found"
             }
     except Exception as e:
-        print(f"Failed to get journal: {e}")
+        logger.exception("Failed to get journal for session %s", _sanitize_for_log(session_id))
         return {
             "success": False,
-            "error": str(e)
+            "error": "Internal server error"
         }
-    
+
+@router.delete("/delete-journal/{session_id}")
+async def delete_journal_entry(session_id: str):
+    """Delete a journal entry and its associated live session"""
+    try:
+        await database_service.delete_journal_entry(session_id)
+        return {"success": True}
+    except Exception as e:
+        logger.exception("Failed to delete journal for session %s", _sanitize_for_log(session_id))
+        return {"success": False, "error": "Failed to delete journal entry"}
+
 @router.put("/update-journal/{session_id}")
 async def update_journal_entry(session_id: str, request: Request):
     """Update journal entry fields with DATE FORMAT CONVERSION"""
@@ -467,7 +487,7 @@ async def update_journal_notes(session_id: str, request: Request):
 # ):
 #     """Start a new live translation session"""
 #     session_id = str(uuid.uuid4())
-    
+
 #     active_sessions[session_id] = {
 #         "user_id": user_id,
 #         "source_language": source_language,
@@ -475,7 +495,7 @@ async def update_journal_notes(session_id: str, request: Request):
 #         "started_at": datetime.now(),
 #         "status": "active"
 #     }
-    
+
 #     return {
 #         "success": True,
 #         "session_id": session_id,
@@ -490,34 +510,34 @@ async def update_journal_notes(session_id: str, request: Request):
 #     """Process audio chunk for live translation"""
 #     if session_id not in active_sessions:
 #         raise HTTPException(status_code=404, detail="Session not found")
-    
+
 #     session = active_sessions[session_id]
-    
+
 #     try:
 #         # Transcribe audio
 #         transcription = await transcribe_audio(file, session["source_language"])
-        
+
 #         if not transcription["success"] or not transcription["text"].strip():
 #             return {
 #                 "status": "no_speech_detected",
 #                 "transcription": "",
 #                 "translation": ""
 #             }
-        
+
 #         # Translate text
 #         translation = await translate_text(
-#             transcription["text"], 
+#             transcription["text"],
 #             session["target_language"],
 #             session["source_language"]
 #         )
-        
+
 #         return {
 #             "status": "success",
 #             "transcription": transcription["text"],
 #             "translation": translation["translated_text"],
 #             "timestamp": datetime.now().isoformat()
 #         }
-        
+
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 

@@ -1,0 +1,38 @@
+name: Loop 2 — CodeQL Security Analysis
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  schedule:
+    - cron: '0 8 * * 1'  # Weekly Monday 8am — catches new rules even if code didn't change
+
+jobs:
+  codeql:
+    name: CodeQL Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write  # required to post findings to GitHub Security tab
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-and-quality  # includes OWASP Top 10, injection, path traversal, etc.
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
+          # Results appear in: GitHub repo → Security → Code scanning alerts
+          # PRs get inline annotations showing exactly which line has the issue

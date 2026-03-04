@@ -317,6 +317,7 @@ class PipelineState(BaseModel):
     # Identity
     session_id: str = Field(default_factory=lambda: f"session-{uuid.uuid4()}")
     family_id: str = ""
+    user_id: str = ""
     patient_name: str = "Patient"
     target_language: str = "vi"
 

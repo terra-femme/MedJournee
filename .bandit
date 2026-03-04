@@ -1,0 +1,8 @@
+skips:
+  - B101  # assert_used — common in FastAPI deps, not a production risk
+  - B311  # standard pseudo-random — ok for non-security use (UUIDs handled separately)
+
+exclude_dirs:
+  - tests
+  - migrations
+  - alembic

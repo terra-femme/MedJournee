@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MedJournee">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon.ico">
+    <title>MedJournee - Past Appointments</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            padding-top: calc(16px + env(safe-area-inset-top));
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px 8px 4px 0;
+            line-height: 1;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .content {
+            padding: 16px 20px;
+            padding-bottom: calc(32px + env(safe-area-inset-bottom));
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .appt-card {
+            background: rgba(255,165,0,0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,165,0,0.2);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .appt-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .appt-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .appt-meta {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .appt-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn-edit {
+            flex: 1;
+            padding: 8px;
+            background: rgba(74,144,226,0.2);
+            border: 1px solid rgba(74,144,226,0.3);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            flex: 1;
+            padding: 8px;
+            background: rgba(239,83,80,0.15);
+            border: 1px solid rgba(239,83,80,0.3);
+            border-radius: var(--radius-sm);
+            color: #ef5350;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <button class="back-btn" onclick="window.location.href='/static/mobile.html'">&#8592;</button>
+        <span class="page-title">Past Appointments</span>
+    </div>
+
+    <div class="content" id="content">
+        <div class="loading">Loading past appointments...</div>
+    </div>
+
+    <script src="/static/js/config.js"></script>
+    <script>
+        const USER_ID = localStorage.getItem('userId') || localStorage.getItem('familyId') || 'user-001';
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadPastAppointments() {
+            const content = document.getElementById('content');
+            try {
+                const response = await fetch(`${API_BASE}/appointments/list/${USER_ID}?limit=100`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    content.innerHTML = `<div class="empty-state"><div class="empty-icon">&#128197;</div><p>Failed to load appointments.</p></div>`;
+                    return;
+                }
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const past = (result.appointments || []).filter(a => {
+                    const d = new Date(a.scheduled_date + 'T00:00:00');
+                    return d < today;
+                }).sort((a, b) => new Date(b.scheduled_date) - new Date(a.scheduled_date));
+
+                if (past.length === 0) {
+                    content.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">&#128197;</div>
+                            <h3>No Past Appointments</h3>
+                            <p>Your past appointments will appear here.</p>
+                        </div>`;
+                    return;
+                }
+
+                content.innerHTML = past.map(appt => `
+                    <div class="appt-card" id="appt-${appt.id}">
+                        <div class="appt-date">${formatDate(appt.scheduled_date)}</div>
+                        <div class="appt-title">${escapeHtml(appt.title)}</div>
+                        <div class="appt-meta">
+                            ${appt.provider_name ? escapeHtml(appt.provider_name) : ''}
+                            ${appt.provider_name && appt.appointment_type ? ' &bull; ' : ''}
+                            ${appt.appointment_type ? escapeHtml(appt.appointment_type) : ''}
+                        </div>
+                        <div class="appt-actions">
+                            <button class="btn-edit" onclick="editAppointment('${appt.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteAppointment('${appt.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (e) {
+                content.innerHTML = `<div class="empty-state"><div class="empty-icon">&#128197;</div><p>Could not load appointments.</p></div>`;
+            }
+        }
+
+        function editAppointment(id) {
+            window.location.href = `/static/appointment.html?id=${id}`;
+        }
+
+        async function deleteAppointment(id) {
+            if (!confirm('Delete this appointment? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/appointments/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    const card = document.getElementById(`appt-${id}`);
+                    if (card) card.remove();
+                } else {
+                    alert('Failed to delete appointment.');
+                }
+            } catch (e) {
+                alert('Network error.');
+            }
+        }
+
+        window.addEventListener('load', loadPastAppointments);
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
+</body>
+</html>

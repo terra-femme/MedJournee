@@ -35,7 +35,9 @@ async def instant_transcribe(
     provider_translate_to: str = Form("vi"),
     family_spoken: str = Form("vi"),
     family_translate_to: str = Form("en"),
-    family_id: str = Form(default="")
+    family_id: str = Form(default=""),
+    session_id: str = Form(default=""),
+    user_id: str = Form(default="")
 ):
     """
     FAST bidirectional transcription for real-time display during recording.
@@ -56,7 +58,9 @@ async def instant_transcribe(
             provider_translate_to=provider_translate_to,
             family_spoken=family_spoken,
             family_translate_to=family_translate_to,
-            family_id=family_id
+            family_id=family_id,
+            session_id=session_id,
+            user_id=user_id
         )
 
         return result
@@ -159,6 +163,7 @@ async def finalize_session(
             state = await pipeline.process(
                 audio_file=file,
                 family_id=family_id,
+                user_id=user_id,
                 provider_spoken=provider_spoken,
                 provider_translate_to=provider_translate_to,
                 family_spoken=family_spoken,
