@@ -36,3 +36,4 @@ node_modules/
 *.pkl
 *.joblib
 *.h5
+.claude
