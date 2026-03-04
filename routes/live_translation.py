@@ -356,7 +356,7 @@ async def get_session_journal(session_id: str):
                 "error": "Journal entry not found"
             }
     except Exception as e:
-        logger.exception("Failed to get journal for session %s", session_id)
+        logger.exception("Failed to get journal for session %s", _sanitize_for_log(session_id))
         return {
             "success": False,
             "error": "Internal server error"
@@ -369,7 +369,7 @@ async def delete_journal_entry(session_id: str):
         await database_service.delete_journal_entry(session_id)
         return {"success": True}
     except Exception as e:
-        logger.exception("Failed to delete journal for session %s", session_id)
+        logger.exception("Failed to delete journal for session %s", _sanitize_for_log(session_id))
         return {"success": False, "error": "Failed to delete journal entry"}
 
 @router.put("/update-journal/{session_id}")
