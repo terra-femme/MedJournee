@@ -20,15 +20,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: "pip"
 
-      - name: Install dependencies
+      - name: Install security tools
         run: |
           python -m pip install --upgrade pip
           pip install bandit[toml] pip-audit detect-secrets safety
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
       # Step 1: Secrets detection
       - name: Detect secrets
@@ -58,8 +56,8 @@ jobs:
       - name: Safety dependency check
         id: safety
         run: |
-          safety check --json --output safety-report.json || true
-          safety check
+          safety scan --output json > safety-report.json || true
+          safety scan
         continue-on-error: true  # SOFT FAIL — safety has more false positives
 
       # Step 5: Upload reports as artifacts (creates audit trail for HIPAA)

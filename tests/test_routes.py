@@ -16,8 +16,7 @@ Usage:
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent

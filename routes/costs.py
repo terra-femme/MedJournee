@@ -2,13 +2,14 @@
 """Cost tracking API routes — query API usage and costs per user."""
 
 from fastapi import APIRouter
-from typing import Optional
 import os
+import logging
 from supabase import create_client
 from dotenv import load_dotenv
 
 load_dotenv()
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _get_supabase():
@@ -57,8 +58,8 @@ async def get_cost_summary(user_id: str):
                 recorded = datetime.fromisoformat(r["recorded_at"].replace("Z", "+00:00"))
                 if recorded.year == now.year and recorded.month == now.month:
                     this_month_usd += c
-            except Exception:
-                pass
+            except ValueError:
+                continue  # skip malformed timestamps from monthly total
 
         return {
             "success": True,
@@ -77,7 +78,8 @@ async def get_cost_summary(user_id: str):
             }
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        logger.exception("Error fetching cost summary for user %s", user_id)
+        return {"success": False, "error": "Internal server error"}
 
 
 @router.get("/history/{user_id}")
@@ -130,7 +132,8 @@ async def get_cost_history(user_id: str, limit: int = 30):
 
         return {"success": True, "sessions": session_list}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        logger.exception("Error fetching cost history for user %s", user_id)
+        return {"success": False, "error": "Internal server error"}
 
 
 @router.get("/daily/{user_id}")
@@ -165,4 +168,5 @@ async def get_daily_costs(user_id: str, days: int = 30):
 
         return {"success": True, "daily": result}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        logger.exception("Error fetching daily costs for user %s", user_id)
+        return {"success": False, "error": "Internal server error"}

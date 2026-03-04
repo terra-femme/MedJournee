@@ -8,8 +8,10 @@ from datetime import datetime
 from services.ai_journal_service import ai_journal_service
 from pydantic import BaseModel
 from services.database_service import database_service
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # In-memory session storage (replace with Redis/database in production)
 active_sessions: Dict[str, Dict] = {}
@@ -346,10 +348,10 @@ async def get_session_journal(session_id: str):
                 "error": "Journal entry not found"
             }
     except Exception as e:
-        print(f"Failed to get journal: {e}")
+        logger.exception("Failed to get journal for session %s", session_id)
         return {
             "success": False,
-            "error": str(e)
+            "error": "Internal server error"
         }
 
 @router.delete("/delete-journal/{session_id}")
@@ -359,8 +361,8 @@ async def delete_journal_entry(session_id: str):
         await database_service.delete_journal_entry(session_id)
         return {"success": True}
     except Exception as e:
-        print(f"Delete journal error: {e}")
-        return {"success": False, "error": str(e)}
+        logger.exception("Failed to delete journal for session %s", session_id)
+        return {"success": False, "error": "Failed to delete journal entry"}
 
 @router.put("/update-journal/{session_id}")
 async def update_journal_entry(session_id: str, request: Request):
