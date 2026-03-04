@@ -13,6 +13,14 @@ import logging
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
+def _sanitize_for_log(value: str) -> str:
+    """Strip newlines from user-controlled values before logging to prevent log injection."""
+    if not isinstance(value, str):
+        value = str(value)
+    return value.replace("\r", "").replace("\n", "")
+
+
 # In-memory session storage (replace with Redis/database in production)
 active_sessions: Dict[str, Dict] = {}
 completed_sessions: Dict[str, Dict] = {}

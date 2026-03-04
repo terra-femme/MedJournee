@@ -12,6 +12,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: str) -> str:
+    """Strip newlines from user-controlled values before logging to prevent log injection."""
+    if not isinstance(value, str):
+        value = str(value)
+    return value.replace("\r", "").replace("\n", "")
+
+
 def _get_supabase():
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
@@ -78,7 +85,7 @@ async def get_cost_summary(user_id: str):
             }
         }
     except Exception as e:
-        logger.exception("Error fetching cost summary for user %s", user_id)
+        logger.exception("Error fetching cost summary for user %s", _sanitize_for_log(user_id))
         return {"success": False, "error": "Internal server error"}
 
 
@@ -132,7 +139,7 @@ async def get_cost_history(user_id: str, limit: int = 30):
 
         return {"success": True, "sessions": session_list}
     except Exception as e:
-        logger.exception("Error fetching cost history for user %s", user_id)
+        logger.exception("Error fetching cost history for user %s", _sanitize_for_log(user_id))
         return {"success": False, "error": "Internal server error"}
 
 
@@ -168,5 +175,5 @@ async def get_daily_costs(user_id: str, days: int = 30):
 
         return {"success": True, "daily": result}
     except Exception as e:
-        logger.exception("Error fetching daily costs for user %s", user_id)
+        logger.exception("Error fetching daily costs for user %s", _sanitize_for_log(user_id))
         return {"success": False, "error": "Internal server error"}
