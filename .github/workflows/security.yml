@@ -46,8 +46,8 @@ jobs:
       - name: Bandit SAST scan
         id: bandit
         run: |
-          bandit -r . -c .bandit -f json -o bandit-report.json -ll || true
-          bandit -r . -c .bandit -ll
+          bandit -r . -c pyproject.toml -f json -o bandit-report.json -ll || true
+          bandit -r . -c pyproject.toml -ll
         continue-on-error: false  # HARD FAIL on medium+ findings
 
       # Step 3: Dependency CVE scan

@@ -1,0 +1,38 @@
+repos:
+  # 1. detect-secrets — catches API keys, passwords, tokens before commit
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: '(\.secrets\.baseline|tests/fixtures/.*|\.env\.example)'
+
+  # 2. bandit — Python SAST, catches injection, weak crypto, shell=True
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml', '-ll']  # -ll = only medium and high severity
+        exclude: '^tests/'              # don't scan test files for prod issues
+        additional_dependencies: ['bandit[toml]']
+
+  # 3. Standard hygiene (fast, no false positives)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files    # catches accidentally committed audio files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: no-commit-to-branch        # prevent direct commits to main
+        args: ['--branch', 'main', '--branch', 'master']
+
+  # 4. Safety — checks dependencies against Safety vulnerability DB
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.3
+    hooks:
+      - id: python-safety-dependencies-check
+        files: requirements.*\.txt$

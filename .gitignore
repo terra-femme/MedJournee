@@ -16,7 +16,6 @@ secrets.json
 .secrets.baseline
 
 # Config files (local only)
-.pre-commit-config.yaml
 render.yaml
 requirements-render.txt
 runtime.txt
