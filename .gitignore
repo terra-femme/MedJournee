@@ -55,7 +55,7 @@ loop docs/
 
 # Security reports
 security_report.html
-docs/security/
+docs/
 
 # Database
 *.db
