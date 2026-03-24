@@ -4,7 +4,7 @@
 const API_CONFIG = {
     LOCAL: 'http://localhost:8000',
     TAILSCALE: 'https://terra.tail8736aa.ts.net',
-    RENDER: 'https://your-app.onrender.com'
+    RENDER: 'https://medjournee-backend.onrender.com'
 };
 
 // AUTO-DETECT: Checks the URL in the browser address bar

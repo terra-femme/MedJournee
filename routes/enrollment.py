@@ -9,23 +9,27 @@ Provides endpoints for:
 - Testing voice recognition
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional
 import os
 from dotenv import load_dotenv
 from supabase import create_client
 
+from middleware.auth import require_auth
+from utils.upload_validation import validate_audio_upload
 from services.voice_enrollment_service import voice_enrollment_service
 
 load_dotenv()
 
 router = APIRouter()
 
-# Supabase client for listing enrollments
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
-supabase = create_client(supabase_url, supabase_key)
+
+def _get_supabase():
+    """Return a Supabase client, initialised on demand rather than at import time."""
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+    return create_client(url, key)
 
 
 @router.post("/enroll")
@@ -33,7 +37,8 @@ async def enroll_voice(
     audio: UploadFile = File(..., description="Audio file with 15-20 seconds of clear speech"),
     family_id: str = Form(..., description="Family identifier"),
     speaker_name: str = Form(..., description="Name of the person being enrolled"),
-    relationship: str = Form(default="family_member", description="Relationship: provider, patient, family_member")
+    relationship: str = Form(default="family_member", description="Relationship: provider, patient, family_member"),
+    _user: dict = Depends(require_auth),
 ):
     """
     Enroll a family member's voice for speaker identification.
@@ -48,6 +53,8 @@ async def enroll_voice(
     - patient: The patient being cared for
     - family_member: Family member (caregiver, translator, etc.)
     """
+    await validate_audio_upload(audio)
+
     if not audio.filename:
         raise HTTPException(status_code=400, detail="No audio file provided")
 
@@ -75,13 +82,14 @@ async def enroll_voice(
 
 
 @router.get("/list/{family_id}")
-async def list_enrollments(family_id: str):
+async def list_enrollments(family_id: str, _user: dict = Depends(require_auth)):
     """
     List all enrolled speakers for a family.
 
     Returns enrollment metadata (not voice profiles).
     """
     try:
+        supabase = _get_supabase()
         result = supabase.table("voice_enrollments") \
             .select("id, speaker_name, relationship, quality_score, sample_count, enrollment_date, active") \
             .eq("family_id", family_id) \
@@ -100,13 +108,14 @@ async def list_enrollments(family_id: str):
 
 
 @router.delete("/delete/{enrollment_id}")
-async def delete_enrollment(enrollment_id: str, family_id: str):
+async def delete_enrollment(enrollment_id: str, family_id: str, _user: dict = Depends(require_auth)):
     """
     Delete a voice enrollment.
 
     Soft deletes by setting active=False (preserves audit trail).
     """
     try:
+        supabase = _get_supabase()
         # Verify the enrollment belongs to the family
         check = supabase.table("voice_enrollments") \
             .select("id, family_id") \
@@ -134,7 +143,8 @@ async def delete_enrollment(enrollment_id: str, family_id: str):
 @router.post("/test-recognition")
 async def test_voice_recognition(
     audio: UploadFile = File(..., description="Audio sample to test"),
-    family_id: str = Form(..., description="Family identifier")
+    family_id: str = Form(..., description="Family identifier"),
+    _user: dict = Depends(require_auth),
 ):
     """
     Test voice recognition against enrolled speakers.
@@ -142,6 +152,8 @@ async def test_voice_recognition(
     Returns the matched speaker name and confidence score.
     Useful for verifying enrollments work correctly.
     """
+    await validate_audio_upload(audio)
+
     if not audio.filename:
         raise HTTPException(status_code=400, detail="No audio file provided")
 
