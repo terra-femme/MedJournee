@@ -9,15 +9,17 @@ Production-grade medical journal app with:
 - Schema-driven design
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from routes import transcribe, translate, tts, journal, combined_translation, live_translation
 from routes import realtime_routes, enrollment, appointments, talking_points, costs
+from routes import gladia_routes
 import asyncio
 import os
+from typing import Optional
 
 
 # =============================================================================
@@ -63,6 +65,10 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS middleware
+# allow_credentials=True is required because the frontend sends an
+# Authorization header (a non-simple header that triggers a preflight).
+# With credentials enabled, allow_origins must be an explicit list — never "*".
+# allow_methods and allow_headers are restricted to what the API actually uses.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -73,8 +79,8 @@ app.add_middleware(
         "http://localhost:8080",             # Local development alternative
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # Timeout middleware (5 minute max for long-running operations)
@@ -91,6 +97,7 @@ app.include_router(enrollment.router, prefix="/enrollment", tags=["Voice Enrollm
 app.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
 app.include_router(talking_points.router, prefix="/talking-points", tags=["Talking Points"])
 app.include_router(costs.router, prefix="/costs", tags=["Cost Tracking"])
+app.include_router(gladia_routes.router, prefix="/gladia", tags=["Gladia Real-time"])
 
 
 @app.get("/sw.js")
@@ -121,6 +128,13 @@ async def serve_costs_dashboard():
 async def serve_enrollment():
     """Serve the voice enrollment page"""
     html_path = os.path.join("static", "enrollment.html")
+    return FileResponse(html_path)
+
+
+@app.get("/dictionary")
+async def serve_dictionary():
+    """Serve the standalone medical dictionary page"""
+    html_path = os.path.join("static", "dictionary.html")
     return FileResponse(html_path)
 
 
@@ -189,13 +203,25 @@ async def test():
 
 
 @app.get("/metrics")
-async def metrics():
+async def metrics(x_metrics_key: Optional[str] = Header(default=None, alias="X-Metrics-Key")):
     """
     Prometheus metrics endpoint.
 
     Returns metrics in Prometheus exposition format for scraping.
+
+    Authentication: requires X-Metrics-Key header matching the METRICS_API_KEY
+    environment variable. This is a separate key from user JWTs because
+    Prometheus scrapers are infrastructure tools, not end users.
     """
     from fastapi.responses import Response
+
+    metrics_key = os.getenv("METRICS_API_KEY")
+    if metrics_key and x_metrics_key != metrics_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid X-Metrics-Key header.",
+        )
+
     try:
         from telemetry.metrics import get_metrics_collector
         collector = get_metrics_collector()
@@ -224,8 +250,8 @@ async def startup_event():
     print("  - State Management: Full pipeline tracking")
     print("=" * 60)
     print("Agents:")
-    print("  1. TranscriptionAgent - Audio to text (Whisper)")
-    print("  2. DiarizationAgent - Speaker identification (AssemblyAI)")
+    print("  1. TranscriptionAgent - Real-time audio to text (Gladia live WebSocket [formerly Whisper HTTP-POST])")
+    print("  2. DiarizationAgent - Speaker identification (Gladia live [formerly AssemblyAI post-recording])")
     print("  3. TranslationAgent - Bidirectional (FREE deep-translator)")
     print("  4. TerminologyAgent - Medical terms (offline dictionary)")
     print("  5. SummarizationAgent - Journal generation (GPT-4)")

@@ -16,16 +16,83 @@ Endpoints:
 Uses the production multi-agent pipeline.
 """
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form
 from typing import Optional
 import json
 
+from middleware.auth import require_auth
+from utils.upload_validation import validate_audio_upload
 from models.schemas import (
     InstantTranscribeResponse,
     FinalizeSessionResponse,
+    SpeakerSegment,
+    SpeakerRole,
+    DiarizationResult,
 )
 
 router = APIRouter()
+
+
+def _gladia_to_diarization(transcripts: list) -> Optional[DiarizationResult]:
+    """
+    Convert Gladia instant_transcripts (captured during live recording) into a
+    DiarizationResult so the pipeline can skip AssemblyAI entirely.
+
+    Each transcript entry has: text, translation, detected_language,
+    speaker_role, speaker_name, start, end.
+    """
+    if not transcripts:
+        return None
+
+    segments = []
+    for i, t in enumerate(transcripts):
+        role_str = (t.get("speaker_role") or "").lower()
+        if "family" in role_str or "patient" in role_str:
+            role = SpeakerRole.PATIENT_FAMILY
+        elif role_str == "provider":
+            role = SpeakerRole.HEALTHCARE_PROVIDER
+        else:
+            role = SpeakerRole.UNKNOWN
+
+        # "Speaker 1" → "SPEAKER_1"
+        speaker_name = t.get("speaker_name") or f"Speaker {i + 1}"
+        try:
+            num = speaker_name.strip().split()[-1]
+            int(num)
+            speaker = f"SPEAKER_{num}"
+        except (ValueError, IndexError):
+            speaker = f"SPEAKER_{i + 1}"
+
+        start_time = float(t.get("start") or (i * 5.0))
+        end_time = float(t.get("end") or (start_time + 5.0))
+
+        text = (t.get("text") or "").strip()
+        if not text:
+            continue
+
+        segments.append(SpeakerSegment(
+            speaker=speaker,
+            speaker_role=role,
+            text=text,
+            detected_language=t.get("detected_language") or "",
+            start_time=start_time,
+            end_time=end_time,
+            confidence=0.92,
+        ))
+
+    if not segments:
+        return None
+
+    total_duration = max(s.end_time for s in segments)
+    unique_speakers = len(set(s.speaker for s in segments))
+
+    return DiarizationResult(
+        success=True,
+        segments=segments,
+        total_speakers=unique_speakers,
+        total_duration=total_duration,
+        error=None,
+    )
 
 
 @router.post("/instant-transcribe/")
@@ -35,9 +102,12 @@ async def instant_transcribe(
     provider_translate_to: str = Form("vi"),
     family_spoken: str = Form("vi"),
     family_translate_to: str = Form("en"),
+    provider_spoken_2: str = Form(""),
+    family_spoken_2: str = Form(""),
     family_id: str = Form(default=""),
     session_id: str = Form(default=""),
-    user_id: str = Form(default="")
+    user_id: str = Form(default=""),
+    _user: dict = Depends(require_auth),
 ):
     """
     FAST bidirectional transcription for real-time display during recording.
@@ -49,6 +119,7 @@ async def instant_transcribe(
 
     Use this endpoint every 3-5 seconds during recording.
     """
+    await validate_audio_upload(file)
     from pipeline.orchestrator import instant_transcribe as pipeline_instant
 
     try:
@@ -58,9 +129,11 @@ async def instant_transcribe(
             provider_translate_to=provider_translate_to,
             family_spoken=family_spoken,
             family_translate_to=family_translate_to,
+            provider_spoken_2=provider_spoken_2,
+            family_spoken_2=family_spoken_2,
             family_id=family_id,
             session_id=session_id,
-            user_id=user_id
+            user_id=user_id,
         )
 
         return result
@@ -85,8 +158,11 @@ async def finalize_session(
     provider_translate_to: str = Form("vi"),
     family_spoken: str = Form("vi"),
     family_translate_to: str = Form("en"),
+    provider_spoken_2: str = Form(""),
+    family_spoken_2: str = Form(""),
     instant_transcripts: str = Form("[]"),
-    skip_ai_summary: str = Form("false")
+    skip_ai_summary: str = Form("false"),
+    _user: dict = Depends(require_auth),
 ):
     """
     Finalize recording session with speaker diarization and optional journal generation.
@@ -105,6 +181,7 @@ async def finalize_session(
     4. If skip_ai_summary=true: Saves raw transcript only
     5. Saves to database
     """
+    await validate_audio_upload(file)
     from pipeline.orchestrator import get_pipeline, MedJourneePipeline
     from services.database_service import database_service
 
@@ -120,45 +197,62 @@ async def finalize_session(
         print(f"Finalizing session {session_id} with {len(transcripts)} instant transcripts")
         print(f"Skip AI summary: {skip_ai}")
 
+        # Convert Gladia live transcripts to diarization result (bypasses AssemblyAI)
+        gladia_diarization = _gladia_to_diarization(transcripts)
+        if gladia_diarization:
+            print(f"Using Gladia diarization: {len(gladia_diarization.segments)} segments, "
+                  f"{gladia_diarization.total_speakers} speakers — AssemblyAI skipped")
+
         # Reset file position
         await file.seek(0)
 
-        # If skipping AI, we still need diarization but can skip summarization
+        # If skipping AI, use Gladia segments directly (no summarization)
         if skip_ai:
-            # Run partial pipeline: diarization + translation only
-            from agents.diarization_agent import DiarizationAgent
-            from agents.translation_agent import TranslationAgent
+            if gladia_diarization and gladia_diarization.segments:
+                # Build translated segments directly from Gladia data
+                from models.schemas import TranslatedSegment
+                final_segments = [
+                    TranslatedSegment(
+                        speaker=seg.speaker,
+                        speaker_role=seg.speaker_role,
+                        text=seg.text,
+                        detected_language=seg.detected_language,
+                        start_time=seg.start_time,
+                        end_time=seg.end_time,
+                        confidence=seg.confidence,
+                        translation=transcripts[i].get("translation", "") if i < len(transcripts) else "",
+                    )
+                    for i, seg in enumerate(gladia_diarization.segments)
+                ]
+            else:
+                # Fallback: AssemblyAI diarization (no Gladia data available)
+                from agents.diarization_agent import DiarizationAgent
+                from agents.translation_agent import TranslationAgent
 
-            diarization_agent = DiarizationAgent()
-            translation_agent = TranslationAgent()
+                diarization_agent = DiarizationAgent()
+                translation_agent = TranslationAgent()
 
-            # Step 1: Diarize
-            diarization_result = await diarization_agent.diarize(file, family_id)
+                diarization_result = await diarization_agent.diarize(file, family_id)
 
-            if not diarization_result.success or not diarization_result.segments:
-                return {
-                    "success": False,
-                    "error": diarization_result.error or "Diarization failed",
-                    "failed_stage": "diarization"
-                }
+                if not diarization_result.success or not diarization_result.segments:
+                    return {
+                        "success": False,
+                        "error": diarization_result.error or "Diarization failed",
+                        "failed_stage": "diarization"
+                    }
 
-            # Step 2: Translate segments
-            translated_segments = await translation_agent.translate_segments(
-                diarization_result.segments,
-                provider_spoken,
-                provider_translate_to,
-                family_spoken,
-                family_translate_to
-            )
+                final_segments = await translation_agent.translate_segments(
+                    diarization_result.segments,
+                    provider_spoken, provider_translate_to,
+                    family_spoken, family_translate_to
+                ) or []
 
-            final_segments = translated_segments or []
             journal_entry = None
             state = None
-
             print(f"Raw transcript mode: {len(final_segments)} segments")
 
         else:
-            # Full pipeline with AI summarization
+            # Full pipeline with AI summarization — Gladia diarization skips AssemblyAI
             pipeline = get_pipeline()
             state = await pipeline.process(
                 audio_file=file,
@@ -169,7 +263,8 @@ async def finalize_session(
                 family_spoken=family_spoken,
                 family_translate_to=family_translate_to,
                 patient_name=patient_name,
-                session_id=session_id
+                session_id=session_id,
+                precomputed_diarization=gladia_diarization,
             )
 
             if not state.is_successful():
@@ -199,9 +294,9 @@ async def finalize_session(
                 {
                     "speaker": seg.speaker,
                     "speaker_role": seg.speaker_role.value if hasattr(seg.speaker_role, 'value') else str(seg.speaker_role),
-                    "enrolled_name": seg.enrolled_name,
+                    "enrolled_name": getattr(seg, "enrolled_name", None),
                     "text": seg.text,
-                    "translation": seg.translation if hasattr(seg, 'translation') else "",
+                    "translation": getattr(seg, "translation", ""),
                     "start_time": seg.start_time,
                     "end_time": seg.end_time
                 }
