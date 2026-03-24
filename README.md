@@ -1,6 +1,6 @@
 # MedJournee
 
-A privacy-first medical journaling platform for families with language barriers. Records, transcribes, translates, and summarizes medical conversations — then stores them as structured journal entries families can review later.
+A privacy-first medical journaling platform for families with language barriers. Live stream diarize: transcribes, translates, and (if the user chooses) summarizes medical conversations OR plain raw transcriptions — then stores them as structured journal entries families can review later.
 
 ---
 
@@ -11,15 +11,15 @@ A privacy-first medical journaling platform for families with language barriers.
 25 million people in the US have limited English proficiency. In medical settings this means:
 - Diagnoses and treatment instructions get lost in translation
 - Family members can't participate meaningfully in care decisions
-- No reliable record of what was said after the appointment ends
+- No reliable live-diarize of what was said after the appointment ends
 
-MedJournee gives families a private, accurate record of their medical conversations in their own language.
+MedJournee gives families a private, accurate live-diarize of their medical conversations in their own language.
 
 ---
 
 ## How It Works
 
-A family member opens the app before a medical appointment and taps Record. The conversation is transcribed in real time, translated, and after the session, processed through a 5-agent pipeline that produces a structured journal entry with speaker labels, a medical terminology guide, and a plain-language summary.
+A family member opens the app before a medical appointment and taps live-diarize. The conversation is transcribed in real time, translated, and after the session, processed through a 5-agent pipeline that produces a structured journal entry with speaker labels, a medical terminology guide, and a plain-language summary.
 
 ```
 Audio → TranscriptionAgent → DiarizationAgent → TranslationAgent → TerminologyAgent → SummarizationAgent → Journal Entry
