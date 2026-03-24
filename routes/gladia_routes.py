@@ -48,7 +48,7 @@ async def create_session(req: SessionRequest, _user: dict = Depends(require_auth
         session = await create_live_session(languages=languages)
     except Exception as e:
         logger.error(f"[Gladia] Session creation failed: {e}")
-        return JSONResponse(status_code=502, content={"error": str(e)})
+        return JSONResponse(status_code=502, content={"error": "Failed to create Gladia session"})
     return {"session_id": session["session_id"]}
 
 
@@ -78,6 +78,9 @@ async def websocket_proxy(
         return
 
     await websocket.accept()
+
+    # Sanitize session_id before any logging to prevent log injection
+    safe_sid = session_id.replace('\n', '').replace('\r', '')[:36]
 
     gladia_url = get_session_url(session_id)
     if not gladia_url:
@@ -157,7 +160,6 @@ async def websocket_proxy(
                             translation = ""
                             try:
                                 from services.translation_service import translate_text
-                                target = family_translate_to if not is_family else family_translate_to
                                 if detected_lang.startswith(family_spoken[:2]):
                                     target = family_translate_to
                                 else:
@@ -181,7 +183,7 @@ async def websocket_proxy(
 
                 except Exception as e:
                     logger.warning(f"[Gladia] gladia_to_browser error: {e}")
-                logger.info(f"[Gladia] gladia_to_browser exited for session {session_id}")
+                logger.info("[Gladia] gladia_to_browser exited for session %s", safe_sid)
 
             await asyncio.gather(
                 audio_to_gladia(),
@@ -190,8 +192,8 @@ async def websocket_proxy(
             )
 
     except WebSocketDisconnect:
-        pass
+        pass  # Browser disconnected cleanly during proxy setup — no action needed
     except Exception as e:
-        logger.error(f"[Gladia] Proxy error for session {session_id}: {e}")
+        logger.error("[Gladia] Proxy error for session %s: %s", safe_sid, e)
     finally:
         remove_session(session_id)

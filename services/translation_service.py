@@ -119,7 +119,8 @@ async def _translate_free(text: str, target_lang: str, source_lang: Optional[str
         translator = GoogleTranslator(source=source, target=target)
         translated_text = translator.translate(text.strip())
         
-        logger.info(f"FREE translate: {len(text)} chars -> {target}")
+        safe_target = target.replace('\n', '').replace('\r', '')[:10]
+        logger.info("FREE translate: %d chars -> %s", len(text), safe_target)
         
         return {
             "translated_text": translated_text,
@@ -215,6 +216,111 @@ def get_supported_languages() -> Dict[str, str]:
         "th": "Thai",
         "tl": "Tagalog",
     }
+
+
+# ---------------------------------------------------------------------------
+# MEDICAL TERM TRANSLATION
+# ---------------------------------------------------------------------------
+
+import json as _json
+import pathlib as _pathlib
+
+_ABBREV_DATA: Optional[Dict] = None
+
+
+def _load_abbreviations() -> Dict:
+    """Load medical abbreviation dictionary (lazy, cached)."""
+    global _ABBREV_DATA
+    if _ABBREV_DATA is None:
+        abbrev_path = _pathlib.Path(__file__).parent.parent / "data" / "medical_abbreviations.json"
+        try:
+            with open(abbrev_path, encoding="utf-8") as f:
+                _ABBREV_DATA = _json.load(f)
+        except Exception as e:
+            logger.warning(f"Could not load medical_abbreviations.json: {e}")
+            _ABBREV_DATA = {}
+    return _ABBREV_DATA
+
+
+def _check_abbreviation_dict(term: str, source_lang: str, target_lang: str) -> Optional[str]:
+    """
+    Look up term in the local medical abbreviation dictionary.
+
+    Checks the target language section first (most useful for family), then source.
+    Returns the expanded form string if found, None otherwise.
+    """
+    data = _load_abbreviations()
+    if not data:
+        return None
+
+    term_upper = term.strip().upper()
+
+    # Normalise zh variants to single key
+    def norm_lang(code: str) -> str:
+        code = code.lower().strip()
+        if code in ("zh-cn", "zh-tw", "zh"):
+            return "zh"
+        return code
+
+    for lang_key in [norm_lang(target_lang), norm_lang(source_lang)]:
+        section = data.get(lang_key, {})
+        if term_upper in section:
+            return section[term_upper]
+
+    return None
+
+
+async def translate_medical_term(
+    term: str,
+    target_lang: str,
+    source_lang: str = "auto",
+) -> Dict[str, Any]:
+    """
+    Translate a medical term with clinical accuracy.
+
+    Three-step lookup:
+    1. Local abbreviation dictionary (instant, offline)
+    2. Google Translate with a "Medical term:" context prefix to nudge
+       the model toward clinical vocabulary.
+    """
+    if not term or not term.strip():
+        return {
+            "translated_text": "",
+            "source_language": source_lang,
+            "target_language": target_lang,
+            "success": False,
+            "error_message": "No term provided",
+        }
+
+    # Step 1: local abbreviation lookup
+    abbrev_match = _check_abbreviation_dict(term.strip(), source_lang, target_lang)
+    if abbrev_match:
+        logger.info(f"Medical abbrev hit: '{term}' → '{abbrev_match}' (target={target_lang})")
+        return {
+            "translated_text": abbrev_match,
+            "source_language": source_lang,
+            "target_language": target_lang,
+            "confidence": 1.0,
+            "success": True,
+            "error_message": None,
+            "source": "local_dict",
+        }
+
+    # Step 2: Google Translate with medical context prefix
+    context_term = f"Medical term: {term.strip()}"
+    result = await translate_text(context_term, target_lang, source_lang if source_lang != "auto" else None)
+
+    if result.get("success"):
+        # Strip the echoed "Medical term: " prefix if the translator echoed it back
+        translated = result.get("translated_text", "")
+        for prefix in ("Medical term:", "Thuật ngữ y tế:", "Término médico:", "医学术语:", "医疗术语:"):
+            if translated.startswith(prefix):
+                translated = translated[len(prefix):].strip()
+                break
+        result["translated_text"] = translated
+        result["source"] = "translate_api"
+
+    return result
 
 
 print("Translation service loaded - using FREE deep-translator")
