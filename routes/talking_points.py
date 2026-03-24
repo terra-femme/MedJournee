@@ -4,13 +4,14 @@ API endpoints for talking points (checklist items) management.
 Handles CRUD, toggle, and reorder operations.
 """
 
-from fastapi import APIRouter, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form
 from typing import Optional, List
 from pydantic import BaseModel
+from middleware.auth import require_auth
 from services.talking_points_service import TalkingPointsService
 from services.database_service import database_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_auth)])
 
 # Initialize service with the database client
 talking_points_service = TalkingPointsService(database_service.supabase)

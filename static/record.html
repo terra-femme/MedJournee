@@ -116,15 +116,28 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .segment.speaker-1 {
-            background: rgba(74, 144, 226, 0.12);
-            border-left-color: var(--sunset-blue);
-        }
+        /* Speaker colors — supports up to 10 distinct voices */
+        .segment.speaker-1  { background: rgba(74,  144, 226, 0.12); border-left-color: #4A90E2; }
+        .segment.speaker-2  { background: rgba(76,  175,  80, 0.12); border-left-color: #4CAF50; }
+        .segment.speaker-3  { background: rgba(255, 152,   0, 0.12); border-left-color: #FF9800; }
+        .segment.speaker-4  { background: rgba(156,  39, 176, 0.12); border-left-color: #9C27B0; }
+        .segment.speaker-5  { background: rgba(  0, 150, 136, 0.12); border-left-color: #009688; }
+        .segment.speaker-6  { background: rgba(229,  57,  53, 0.12); border-left-color: #E53935; }
+        .segment.speaker-7  { background: rgba(245, 158,  11, 0.12); border-left-color: #F59E0B; }
+        .segment.speaker-8  { background: rgba(236,  72, 153, 0.12); border-left-color: #EC4899; }
+        .segment.speaker-9  { background: rgba(  0, 188, 212, 0.12); border-left-color: #00BCD4; }
+        .segment.speaker-10 { background: rgba( 99, 102, 241, 0.12); border-left-color: #6366F1; }
 
-        .segment.speaker-2 {
-            background: rgba(76, 175, 80, 0.12);
-            border-left-color: var(--color-success);
-        }
+        .segment-speaker.speaker-1  { color: #4A90E2; }
+        .segment-speaker.speaker-2  { color: #4CAF50; }
+        .segment-speaker.speaker-3  { color: #FF9800; }
+        .segment-speaker.speaker-4  { color: #9C27B0; }
+        .segment-speaker.speaker-5  { color: #009688; }
+        .segment-speaker.speaker-6  { color: #E53935; }
+        .segment-speaker.speaker-7  { color: #F59E0B; }
+        .segment-speaker.speaker-8  { color: #EC4899; }
+        .segment-speaker.speaker-9  { color: #00BCD4; }
+        .segment-speaker.speaker-10 { color: #6366F1; }
 
         .segment-speaker {
             font-weight: 600;
@@ -133,6 +146,7 @@
             color: var(--text-muted);
         }
 
+        /* Legacy role classes kept for any non-Gladia path; speaker-N classes take precedence */
         .segment-speaker.provider { color: var(--sunset-blue); }
         .segment-speaker.patient { color: #81c784; }
 
@@ -183,6 +197,246 @@
         .btn-save:disabled { background: rgba(102, 102, 102, 0.3); cursor: not-allowed; box-shadow: none; }
 
         .status-badge.processing { background: var(--sunset-orange); }
+
+        /* ── Timeout banner ─────────────────────────────────── */
+        .timeout-banner {
+            position: fixed; top: 70px; left: 16px; right: 16px;
+            background: #FF9800;
+            color: #000;
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 500;
+            animation: slideDown 0.3s ease;
+            gap: 12px;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .timeout-banner button {
+            background: rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        /* ── Disclosure banner ──────────────────────────────── */
+        .disclosure-banner {
+            position: fixed; top: 70px; left: 16px; right: 16px;
+            background: linear-gradient(135deg, #C62828, #B71C1C);
+            color: #fff;
+            border-radius: var(--radius-md);
+            padding: 10px 16px;
+            display: flex; align-items: center; gap: 10px;
+            z-index: 490;
+            animation: slideDown 0.3s ease;
+            box-shadow: 0 4px 20px rgba(183, 28, 28, 0.4);
+        }
+        .disclosure-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #FF5252;
+            flex-shrink: 0;
+            animation: disclosurePulse 1.2s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7);
+        }
+        @keyframes disclosurePulse {
+            0%   { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+            70%  { box-shadow: 0 0 0 8px rgba(255, 82, 82, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+        }
+        .disclosure-text {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        /* ── Session consent notice (below End button) ──────── */
+        .session-consent-notice {
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.65);
+            padding: 8px 24px 0;
+            line-height: 1.5;
+        }
+        .session-consent-notice strong {
+            color: #FF5252;
+            font-weight: 700;
+        }
+
+        /* ── Gladia footnote ────────────────────────────────── */
+        .gladia-footnote {
+            text-align: center;
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            padding: 16px 24px 24px;
+            margin: 0;
+        }
+        .gladia-footnote a {
+            color: rgba(255,255,255,0.55);
+            text-decoration: underline;
+        }
+        .gladia-footnote a:hover { color: rgba(255,255,255,0.85); }
+
+        /* ── Dictionary handle bar ───────────────────────────── */
+        .dict-handle-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 52px;
+            background: var(--glass-medium);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px 20px 0 0;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 100;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            user-select: none;
+        }
+        .dict-handle-pill {
+            width: 36px; height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            margin-right: 10px;
+        }
+        .dict-trigger-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* ── Dictionary bottom sheet ─────────────────────────── */
+        .dict-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 67vh;
+            background: var(--sunset-deep, #1a1f3c);
+            border-radius: 24px 24px 0 0;
+            padding: 16px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+            z-index: 200;
+            overflow-y: auto;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.4);
+        }
+        .dict-sheet.open { transform: translateY(0); }
+        .dict-sheet-handle {
+            width: 36px; height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .dict-direction-toggle {
+            display: flex; gap: 8px;
+            margin-bottom: 14px;
+        }
+        .dict-dir-btn {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.06);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dict-dir-btn.active {
+            background: rgba(255,255,255,0.15);
+            color: var(--text-primary);
+            border-color: rgba(255,255,255,0.3);
+        }
+        .dict-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+        }
+        .dict-input:focus { outline: 2px solid var(--sunset-orange); }
+        .dict-result {
+            background: rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .dict-result-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+        .dict-result-source {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        .dict-result-actions { display: flex; gap: 8px; }
+        .dict-action-btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .dict-action-btn:hover { background: rgba(255,255,255,0.15); }
+        .dict-loading {
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+            padding: 16px;
+        }
+
+        /* ── Show overlay (full screen translation) ──────────── */
+        .dict-show-overlay {
+            position: fixed; inset: 0;
+            background: var(--sunset-deep, #1a1f3c);
+            z-index: 300;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 32px;
+        }
+        .dict-show-text {
+            font-size: clamp(2rem, 10vw, 5rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 32px;
+        }
+        .dict-show-close {
+            padding: 14px 32px;
+            border-radius: var(--radius-full);
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* ── Annotation segment style ────────────────────────── */
+        .segment.dict-annotation {
+            background: rgba(255,193,7,0.08);
+            border-left-color: #FFC107;
+        }
+        .annotation-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* bottom padding so content isn't hidden behind handle bar */
+        body { padding-bottom: 60px; }
     </style>
 </head>
 <body>
@@ -192,22 +446,34 @@
     </div>
 
     <div class="setup-section">
-        <div style="display:flex; gap:10px;">
-            <div class="form-group" style="flex:1;">
-                <label>Patient Name</label>
-                <input type="text" id="patientName" placeholder="Enter patient name" value="Grandma">
-            </div>
-            <div class="form-group" style="flex:1;">
-                <label>Family ID (for enrollment)</label>
-                <input type="text" id="familyId" placeholder="e.g., kristy" value="">
-            </div>
+        <div class="form-group">
+            <label>Patient Name</label>
+            <input type="text" id="patientName" placeholder="Enter patient name" value="Jane">
         </div>
+        <input type="hidden" id="familyId" value="family-001">
         <div style="display:flex; gap:10px;">
             <div style="flex:1;">
                 <div class="form-group">
                     <label style="color:#90CAF9; font-weight:600;">Provider Speaks</label>
-                    <select id="providerSpoken">
+                    <select id="providerSpoken" onchange="updateDictToggleLabels()">
                         <option value="en" selected>English</option>
+                        <option value="vi">Vietnamese</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh-CN">Chinese (Simplified)</option>
+                        <option value="zh-TW">Chinese (Traditional)</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="th">Thai</option>
+                        <option value="tl">Tagalog</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="color:#90CAF9; font-size:11px;">Also speaks (optional)</label>
+                    <select id="providerSpoken2">
+                        <option value="">None (single language)</option>
+                        <option value="en">English</option>
                         <option value="vi">Vietnamese</option>
                         <option value="es">Spanish</option>
                         <option value="zh-CN">Chinese (Simplified)</option>
@@ -240,9 +506,26 @@
             <div style="flex:1;">
                 <div class="form-group">
                     <label style="color:#A5D6A7; font-weight:600;">Family Speaks</label>
-                    <select id="familySpoken">
+                    <select id="familySpoken" onchange="updateDictToggleLabels()">
                         <option value="en">English</option>
                         <option value="vi" selected>Vietnamese</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh-CN">Chinese (Simplified)</option>
+                        <option value="zh-TW">Chinese (Traditional)</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="th">Thai</option>
+                        <option value="tl">Tagalog</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="color:#A5D6A7; font-size:11px;">Also speaks (optional)</label>
+                    <select id="familySpoken2">
+                        <option value="">None (single language)</option>
+                        <option value="en">English</option>
+                        <option value="vi">Vietnamese</option>
                         <option value="es">Spanish</option>
                         <option value="zh-CN">Chinese (Simplified)</option>
                         <option value="zh-TW">Chinese (Traditional)</option>
@@ -299,6 +582,11 @@
             Finish Recording
         </button>
     </div>
+
+    <p class="session-consent-notice" id="sessionConsentNotice" style="display:none">
+        If all parties are not comfortable to consent to translation and transcription
+        services <strong>END</strong> this session now.
+    </p>
 
     <!-- Save Options Modal -->
     <div class="save-options-modal" id="saveOptionsModal">
@@ -429,6 +717,61 @@
             <div class="step" id="step5">Saving to database...</div>
         </div>
     </div>
+
+    <!-- Live disclosure banner — shown during entire recording session -->
+    <div id="disclosureBanner" class="disclosure-banner" style="display:none">
+        <span class="disclosure-dot"></span>
+        <span class="disclosure-text">TRANSCRIPTION &amp; TRANSLATION IN PROGRESS</span>
+    </div>
+
+    <!-- Timeout warning banner -->
+    <div id="timeoutBanner" class="timeout-banner" style="display:none">
+        <span id="timeoutMsg" style="flex:1; font-size:13px;"></span>
+        <button onclick="dismissTimeout()">Continue Recording</button>
+    </div>
+
+    <!-- Dictionary handle bar (always visible at bottom during session) -->
+    <div class="dict-handle-bar" id="dictHandleBar" onclick="toggleDictSheet()" style="display:none">
+        <div class="dict-handle-pill"></div>
+        <span class="dict-trigger-label">&#128216; <span id="dictLastWord">Dictionary</span></span>
+    </div>
+
+    <!-- Dictionary bottom sheet -->
+    <div class="dict-sheet" id="dictSheet">
+        <div class="dict-sheet-handle"></div>
+
+        <div class="dict-direction-toggle">
+            <button class="dict-dir-btn active" id="dictDirForward" onclick="setDictDirection('forward')">
+                English → Vietnamese
+            </button>
+            <button class="dict-dir-btn" id="dictDirReverse" onclick="setDictDirection('reverse')">
+                Vietnamese → English
+            </button>
+        </div>
+
+        <input type="text" id="dictInput" placeholder="Type a medical word or phrase..." class="dict-input" />
+
+        <div class="dict-result" id="dictResult" style="display:none">
+            <div class="dict-result-text" id="dictResultText"></div>
+            <div class="dict-result-source" id="dictResultSource"></div>
+            <div class="dict-result-actions">
+                <button class="dict-action-btn" id="dictTtsBtn">&#128266; Hear it</button>
+                <button class="dict-action-btn" id="dictShowBtn">&#128241; Show</button>
+            </div>
+        </div>
+
+        <div class="dict-loading" id="dictLoading" style="display:none">Translating...</div>
+    </div>
+
+    <!-- Full-screen show mode -->
+    <div class="dict-show-overlay" id="dictShowOverlay" style="display:none">
+        <div class="dict-show-text" id="dictShowText"></div>
+        <button class="dict-show-close" id="dictShowClose">Tap to close</button>
+    </div>
+
+    <p class="gladia-footnote">
+        Learn more about <a href="https://gladia.io" target="_blank" rel="noopener noreferrer">Gladia's</a> services
+    </p>
 
     <script src="/static/js/config.js"></script>
     <script>
@@ -669,9 +1012,15 @@
         let sessionId = null;
         let isProcessingChunk = false;
 
-        // FIX: Track the last processed audio size to detect NEW content
         let lastProcessedSize = 0;
-        let lastFullText = '';
+        let lastSentChunkIndex = 0;
+        let lastFullTranscript = '';
+
+        // Gladia real-time state
+        let gladiaSocket = null;
+        let audioContext = null;
+        let audioProcessor = null;
+        let gladiaSessionId = null;
 
         function goBack() {
             if (isRecording && !confirm('Recording in progress. Discard?')) return;
@@ -705,7 +1054,8 @@
                 allAudioChunks = [];
                 instantTranscripts = [];
                 lastProcessedSize = 0;
-                lastFullText = '';
+                lastSentChunkIndex = 0;
+                lastFullTranscript = '';
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -715,6 +1065,19 @@
 
                 mediaRecorder.start(1000);
                 isRecording = true;
+
+                // Spoken disclosure announcement (every session, no skip)
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utter = new SpeechSynthesisUtterance(
+                        'Transcription and translation for personal use is now in progress.'
+                    );
+                    utter.rate = 0.92; utter.volume = 1.0; utter.lang = 'en-US';
+                    window.speechSynthesis.speak(utter);
+                }
+                // Show disclosure banner and consent notice
+                document.getElementById('disclosureBanner').style.display = 'flex';
+                document.getElementById('sessionConsentNotice').style.display = 'block';
 
                 document.getElementById('recordBtn').classList.add('recording');
                 document.getElementById('recordBtn').innerHTML = 'RECORDING<br>TAP TO STOP';
@@ -726,7 +1089,17 @@
 
                 seconds = 0;
                 timerInterval = setInterval(updateTimer, 1000);
-                processInterval = setInterval(processInstantChunk, 4000);
+
+                // Start Gladia real-time stream (replaces Whisper HTTP-POST interval)
+                await startGladiaStream(stream);
+
+                // Show dictionary handle bar
+                document.getElementById('dictHandleBar').style.display = 'flex';
+                updateDictToggleLabels();
+
+                // Session timeout: 90-minute hard cap
+                hardCapTimer = setTimeout(() => showTimeoutWarning('cap'), HARD_CAP_MS);
+                // Inactivity timer starts on first speech (reset in processInstantChunk)
 
             } catch (error) {
                 console.error('Microphone error:', error);
@@ -735,8 +1108,14 @@
         }
 
         function stopRecording() {
-            clearInterval(processInterval);
+            window.speechSynthesis && window.speechSynthesis.cancel();
+            document.getElementById('disclosureBanner').style.display = 'none';
+            document.getElementById('sessionConsentNotice').style.display = 'none';
+            clearTimeout(inactivityTimer);
+            clearTimeout(hardCapTimer);
             clearInterval(timerInterval);
+
+            stopGladiaStream();
 
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
@@ -758,19 +1137,166 @@
             document.getElementById('timer').textContent = `${mins}:${secs}`;
         }
 
+        async function startGladiaStream(stream) {
+            try {
+                // 1. Create Gladia session on backend
+                const sessionResp = await fetch(`${API_BASE}/gladia/session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider_spoken: document.getElementById('providerSpoken').value,
+                        family_spoken: document.getElementById('familySpoken').value,
+                        provider_spoken_2: document.getElementById('providerSpoken2').value,
+                        family_spoken_2: document.getElementById('familySpoken2').value,
+                    })
+                });
+                const session = await sessionResp.json();
+                if (!sessionResp.ok || !session.session_id) {
+                    console.error('[Gladia] Session creation failed:', session.error || sessionResp.status);
+                    document.getElementById('statusText').textContent = 'Gladia session error — check server log';
+                    return;
+                }
+                gladiaSessionId = session.session_id;
+
+                // 2. Open WebSocket proxy to backend
+                const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+                const host = API_BASE.replace(/^https?:\/\//, '');
+                const famSpoken = document.getElementById('familySpoken').value || 'vi';
+                const provTo = document.getElementById('providerTranslateTo').value || 'vi';
+                const famTo = document.getElementById('familyTranslateTo').value || 'en';
+                const wsUrl = `${proto}://${host}/gladia/ws/${gladiaSessionId}` +
+                    `?family_spoken=${famSpoken}&provider_translate_to=${provTo}&family_translate_to=${famTo}`;
+                gladiaSocket = new WebSocket(wsUrl);
+                gladiaSocket.binaryType = 'arraybuffer';
+
+                gladiaSocket.onopen = () => {
+                    console.log('[Gladia] WebSocket open');
+                    document.getElementById('statusText').textContent = 'Recording... Speak naturally';
+
+                    // 3. Capture PCM via Web Audio API and stream to Gladia
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                    const source = audioContext.createMediaStreamSource(stream);
+                    audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                    // Mute first 2 s so TTS disclosure announcement isn't captured
+                    const streamOpenTime = Date.now();
+
+                    audioProcessor.onaudioprocess = (e) => {
+                        if (!gladiaSocket || gladiaSocket.readyState !== WebSocket.OPEN) return;
+                        if (Date.now() - streamOpenTime < 2000) return;
+                        const float32 = e.inputBuffer.getChannelData(0);
+                        const int16 = new Int16Array(float32.length);
+                        for (let i = 0; i < float32.length; i++) {
+                            int16[i] = Math.max(-32768, Math.min(32767, float32[i] * 32768));
+                        }
+                        gladiaSocket.send(int16.buffer);
+                    };
+
+                    source.connect(audioProcessor);
+                    audioProcessor.connect(audioContext.destination);
+                };
+
+                gladiaSocket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'transcript' && data.is_final && data.text) {
+                        handleGladiaTranscript(data);
+                    }
+                };
+
+                gladiaSocket.onerror = (e) => console.error('[Gladia] Error:', e);
+                gladiaSocket.onclose = () => console.log('[Gladia] WebSocket closed');
+
+            } catch (err) {
+                console.error('[Gladia] Failed to start stream:', err);
+                document.getElementById('statusText').textContent = 'Stream error — check console';
+            }
+        }
+
+        function stopGladiaStream() {
+            if (audioProcessor) { audioProcessor.disconnect(); audioProcessor = null; }
+            if (audioContext)   { audioContext.close();        audioContext = null;   }
+            if (gladiaSocket && gladiaSocket.readyState === WebSocket.OPEN) {
+                gladiaSocket.close();
+            }
+            gladiaSocket = null;
+        }
+
+        function handleGladiaTranscript(data) {
+            const text = data.text.trim();
+            const translation = (data.translation || '').trim();
+            const isFamily = data.speaker_role === 'patient_family';
+            const speakerIndex = data.speaker_index ?? (isFamily ? 1 : 0);
+
+            if (text.length < 3) return;
+
+            resetInactivityTimer();
+
+            instantTranscripts.push({
+                text,
+                translation,
+                detected_language: data.detected_language || '',
+                speaker_role: data.speaker_role,
+                speaker_name: `Speaker ${speakerIndex + 1}`,
+                start: data.start ?? 0,
+                end: data.end ?? 0,
+            });
+
+            displayInstantSegment({
+                text,
+                translation,
+                speaker_role: data.speaker_role,
+                speaker_index: speakerIndex,
+                speaker_name: '',
+                enrollment_confidence: 0,
+            });
+
+            document.getElementById('segmentCount').textContent =
+                `${instantTranscripts.length} segments`;
+            document.getElementById('saveBtn').disabled = false;
+        }
+
+        // Extract only the new portion of a Whisper transcript by comparing to the last
+        // full response. Because we send cumulative audio, Whisper returns the full
+        // conversation each time — we only want to display what's new.
+        function extractNewText(fullText, lastText) {
+            const f = fullText.trim();
+            const l = lastText.trim();
+            if (!l) return f;
+            // Happy path: full text is a clean extension of last text
+            if (f.toLowerCase().startsWith(l.toLowerCase())) {
+                return f.slice(l.length).trim().replace(/^[,.\s]+/, '');
+            }
+            // Fuzzy fallback: find last 6 words of previous transcript inside new transcript
+            const tailWords = l.split(/\s+/).slice(-6).join(' ');
+            const idx = f.toLowerCase().lastIndexOf(tailWords.toLowerCase());
+            if (idx >= 0 && idx + tailWords.length < f.length) {
+                return f.slice(idx + tailWords.length).trim().replace(/^[,.\s]+/, '');
+            }
+            return f; // No overlap found — treat entire response as new
+        }
+
         async function processInstantChunk() {
-            if (allAudioChunks.length < 3 || isProcessingChunk) return;
+            // Need at least 2 chunks (init segment + audio data)
+            if (allAudioChunks.length < 2 || isProcessingChunk) return;
+
+            // Skip if no new chunks since last send
+            if (allAudioChunks.length <= lastSentChunkIndex) return;
 
             isProcessingChunk = true;
 
-            // Create blob from ALL chunks (includes header from chunk 0)
+            // Always send the FULL cumulative blob so FFmpeg always receives a
+            // complete WebM file (header + all clusters). Chrome's continuation
+            // chunks lack the EBML header and cannot be demuxed independently.
             const audioBlob = new Blob(allAudioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
 
-            // Skip if audio hasn't grown enough since last process
-            if (audioBlob.size < lastProcessedSize + 10000) {
+            // Skip if too small — likely silence with no meaningful speech
+            if (audioBlob.size < 2000) {
                 isProcessingChunk = false;
                 return;
             }
+
+            // Mark chunks as sent before the request to prevent re-sending on slow response
+            lastSentChunkIndex = allAudioChunks.length;
 
             const formData = new FormData();
             formData.append('file', audioBlob, 'chunk.webm');
@@ -778,6 +1304,8 @@
             formData.append('provider_translate_to', document.getElementById('providerTranslateTo').value);
             formData.append('family_spoken', document.getElementById('familySpoken').value);
             formData.append('family_translate_to', document.getElementById('familyTranslateTo').value);
+            formData.append('provider_spoken_2', document.getElementById('providerSpoken2').value);
+            formData.append('family_spoken_2', document.getElementById('familySpoken2').value);
             formData.append('family_id', getFamilyId());
 
             try {
@@ -790,89 +1318,36 @@
 
                 const result = await response.json();
 
-                // Always update lastProcessedSize so we don't re-send the same data on failure
-                lastProcessedSize = audioBlob.size;
-
+                // Whisper returns the full transcript of all audio sent so far.
+                // Extract only the new portion by comparing against the last response.
                 if (result.success && result.has_speech && result.text) {
                     const fullText = result.text.trim();
-                    const fullTranslation = (result.translation || '').trim();
+                    const newText = extractNewText(fullText, lastFullTranscript);
+                    lastFullTranscript = fullText;
+                    const newTranslation = (result.translation || '').trim();
 
-                    // Dim segments whose text is no longer present in the latest full transcript
-                    // (Whisper retracted a hallucination in a subsequent chunk)
-                    // Normalize before comparing — Whisper may return the same words with different
-                    // punctuation across chunks, which would cause false retractions with exact matching.
-                    const normalFull = fullText.toLowerCase().replace(/[.,!?;:'"…\-]+/g, '').replace(/\s+/g, ' ').trim();
-                    document.querySelectorAll('#transcriptContent .segment:not(.retracted)').forEach(el => {
-                        const segText = el.querySelector('.segment-text')?.textContent?.trim() || '';
-                        const normalSeg = segText.toLowerCase().replace(/[.,!?;:'"…\-]+/g, '').replace(/\s+/g, ' ').trim();
-                        if (normalSeg.length > 4 && !normalFull.includes(normalSeg)) {
-                            el.classList.add('retracted');
-                            el.style.opacity = '0.35';
-                            el.style.textDecoration = 'line-through';
-                            el.title = 'Retracted by transcription engine';
-                        }
-                    });
+                    if (newText.length > 3) {
+                        // Speech detected — reset inactivity timer
+                        resetInactivityTimer();
 
-                    // Only show NEW content by comparing with previous full text
-                    if (fullText !== lastFullText && fullText.length > lastFullText.length) {
-                        // Find where the new content starts
-                        let newText = fullText;
-                        let newTranslation = fullTranslation;
+                        instantTranscripts.push({
+                            text: newText,
+                            translation: newTranslation,
+                            timestamp: result.timestamp,
+                            detected_language: result.detected_language || '',
+                            speaker_role: result.speaker_role || 'provider',
+                            speaker_name: result.speaker_name || ''
+                        });
 
-                        if (lastFullText.length > 0) {
-                            // Extract only the new portion
-                            // Find where old text ends in new text
-                            const oldLength = lastFullText.length;
+                        displayInstantSegment({
+                            text: newText,
+                            translation: newTranslation,
+                            speaker_role: result.speaker_role || 'provider',
+                            speaker_name: result.speaker_name || '',
+                            enrollment_confidence: result.enrollment_confidence || 0
+                        });
 
-                            // Try to find a good split point (after last matching content)
-                            if (fullText.startsWith(lastFullText)) {
-                                newText = fullText.substring(oldLength).trim();
-                            } else {
-                                // Texts don't align perfectly - find overlap
-                                let overlap = 0;
-                                for (let i = Math.min(50, lastFullText.length); i > 0; i--) {
-                                    const ending = lastFullText.substring(lastFullText.length - i);
-                                    const pos = fullText.indexOf(ending);
-                                    if (pos !== -1) {
-                                        overlap = pos + i;
-                                        break;
-                                    }
-                                }
-                                newText = fullText.substring(overlap).trim();
-                            }
-
-                            // Approximate new translation (translations don't map 1:1)
-                            if (newText.length > 0 && fullTranslation.length > 0) {
-                                const ratio = newText.length / fullText.length;
-                                const transStart = Math.floor(fullTranslation.length * (1 - ratio));
-                                newTranslation = fullTranslation.substring(transStart).trim();
-                            }
-                        }
-
-                        // Only add if we have meaningful new content (more than 3 chars)
-                        if (newText.length > 3) {
-                            instantTranscripts.push({
-                                text: newText,
-                                translation: newTranslation,
-                                timestamp: result.timestamp,
-                                detected_language: result.detected_language || '',
-                                speaker_role: result.speaker_role || 'provider',
-                                speaker_name: result.speaker_name || ''
-                            });
-
-                            displayInstantSegment({
-                                text: newText,
-                                translation: newTranslation,
-                                speaker_role: result.speaker_role || 'provider',
-                                speaker_name: result.speaker_name || '',
-                                enrollment_confidence: result.enrollment_confidence || 0
-                            });
-
-                            document.getElementById('segmentCount').textContent = `${instantTranscripts.length} segments`;
-                        }
-
-                        // Update tracking
-                        lastFullText = fullText;
+                        document.getElementById('segmentCount').textContent = `${instantTranscripts.length} segments`;
                     }
                 }
 
@@ -891,22 +1366,18 @@
             const container = document.getElementById('transcriptContent');
             const segmentIndex = instantTranscripts.length;
 
-            const isEnrolled = !!result.speaker_name;
-
-            // Enrolled speaker → show their name; unknown → show "Speaker"
-            let speakerLabel;
-            if (isEnrolled) {
-                const confidence = result.enrollment_confidence ?
-                    ` (${Math.round(result.enrollment_confidence * 100)}%)` : '';
-                speakerLabel = `${result.speaker_name}${confidence}`;
-            } else {
-                speakerLabel = 'Speaker';
-            }
+            // Color by Gladia speaker index — voice-based, not language-based.
+            // speaker_index 0 → Speaker 1 (blue), 1 → Speaker 2 (green), etc. up to 10.
+            // Names applied after recording in the finalized journal.
+            const isFamily = result.speaker_role === 'patient_family' || result.speaker_role === 'PATIENT_FAMILY';
+            const speakerNum = Math.min((result.speaker_index ?? (isFamily ? 1 : 0)) + 1, 10);
+            const speakerLabel = `Speaker ${speakerNum}`;
+            const speakerClass = `speaker-${speakerNum}`;
 
             const segmentEl = document.createElement('div');
-            segmentEl.className = `segment ${isEnrolled ? 'speaker-2' : 'speaker-1'}`;
+            segmentEl.className = `segment ${speakerClass}`;
             segmentEl.innerHTML = `
-                <div class="segment-speaker ${isEnrolled ? 'patient' : 'provider'}">
+                <div class="segment-speaker ${speakerClass}">
                     ${speakerLabel} - Segment ${segmentIndex}
                 </div>
                 <div class="segment-text">${escapeHtml(result.text)}</div>
@@ -1048,6 +1519,211 @@
                 }
             } catch (e) {
                 document.getElementById('statusText').textContent = 'Cannot connect to server';
+            }
+        });
+
+        // ================================================================
+        // SESSION TIMEOUT
+        // ================================================================
+        let inactivityTimer = null;
+        let hardCapTimer = null;
+        const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000;   // 3 minutes
+        const HARD_CAP_MS          = 90 * 60 * 1000;   // 90 minutes
+        let timeoutCountdown = null;
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            document.getElementById('timeoutBanner').style.display = 'none';
+            clearTimeout(timeoutCountdown);
+            inactivityTimer = setTimeout(() => showTimeoutWarning('inactivity'), INACTIVITY_TIMEOUT_MS);
+        }
+
+        function showTimeoutWarning(reason) {
+            if (!isRecording) return;
+            const msg = reason === 'inactivity'
+                ? 'No speech detected for 3 minutes. Auto-saving in 60 seconds...'
+                : 'Session limit (90 min) reached. Auto-saving in 60 seconds...';
+            document.getElementById('timeoutMsg').textContent = msg;
+            document.getElementById('timeoutBanner').style.display = 'flex';
+            // 60-second grace period before auto-save
+            timeoutCountdown = setTimeout(() => autoSaveSession(), 60000);
+        }
+
+        function dismissTimeout() {
+            document.getElementById('timeoutBanner').style.display = 'none';
+            clearTimeout(timeoutCountdown);
+            resetInactivityTimer();
+        }
+
+        async function autoSaveSession() {
+            document.getElementById('timeoutBanner').style.display = 'none';
+            stopRecording();
+            if (instantTranscripts.length > 0) {
+                await finishAndProcess(false);
+            }
+        }
+
+        // ================================================================
+        // DICTIONARY BOTTOM SHEET
+        // ================================================================
+        let dictOpen = false;
+        let dictDebounceTimer = null;
+        let dictCurrentDirection = 'forward';
+
+        const LANG_NAMES = {
+            'en': 'English', 'vi': 'Vietnamese', 'es': 'Spanish',
+            'zh-CN': 'Chinese (Simplified)', 'zh-TW': 'Chinese (Traditional)',
+            'fr': 'French', 'de': 'German', 'ja': 'Japanese',
+            'ko': 'Korean', 'th': 'Thai', 'tl': 'Tagalog',
+        };
+
+        function getDictLanguages() {
+            const provSpoken = document.getElementById('providerSpoken').value || 'en';
+            const famSpoken  = document.getElementById('familySpoken').value  || 'vi';
+            return {
+                forward: { from: provSpoken, to: famSpoken },
+                reverse: { from: famSpoken,  to: provSpoken },
+            };
+        }
+
+        function updateDictToggleLabels() {
+            const langs = getDictLanguages();
+            const fwdLabel = `${LANG_NAMES[langs.forward.from] || langs.forward.from} → ${LANG_NAMES[langs.forward.to] || langs.forward.to}`;
+            const revLabel = `${LANG_NAMES[langs.reverse.from] || langs.reverse.from} → ${LANG_NAMES[langs.reverse.to] || langs.reverse.to}`;
+            document.getElementById('dictDirForward').textContent = fwdLabel;
+            document.getElementById('dictDirReverse').textContent = revLabel;
+        }
+
+        function setDictDirection(dir) {
+            dictCurrentDirection = dir;
+            document.getElementById('dictDirForward').classList.toggle('active', dir === 'forward');
+            document.getElementById('dictDirReverse').classList.toggle('active', dir === 'reverse');
+            // Re-run lookup if there's already a term
+            const term = document.getElementById('dictInput').value.trim();
+            if (term) lookupTerm(term);
+        }
+
+        function toggleDictSheet() {
+            dictOpen = !dictOpen;
+            document.getElementById('dictSheet').classList.toggle('open', dictOpen);
+            if (dictOpen) {
+                setTimeout(() => document.getElementById('dictInput').focus(), 400);
+            }
+        }
+
+        document.getElementById('dictInput').addEventListener('input', (e) => {
+            clearTimeout(dictDebounceTimer);
+            const term = e.target.value.trim();
+            if (!term) { hideDictResult(); return; }
+            dictDebounceTimer = setTimeout(() => lookupTerm(term), 400);
+        });
+
+        async function lookupTerm(term) {
+            showDictLoading();
+            try {
+                const langs = getDictLanguages();
+                const dir = langs[dictCurrentDirection];
+                const formData = new FormData();
+                formData.append('term', term);
+                formData.append('target_lang', dir.to);
+                formData.append('source_lang', dir.from);
+                const res = await fetch(`${API_BASE}/translate/medical-term/`, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                hideDictLoading();
+                if (data.success && data.translated_text) {
+                    showDictResult(term, data);
+                    injectLookupToTranscript(term, data.translated_text);
+                } else {
+                    hideDictResult();
+                }
+            } catch (err) {
+                hideDictLoading();
+                console.error('Dictionary lookup error:', err);
+            }
+        }
+
+        function showDictResult(term, data) {
+            document.getElementById('dictResultText').textContent = data.translated_text;
+            const srcLabel = data.source === 'local_dict' ? '&#128218; Local dictionary' : '&#127760; Google Translate (medical context)';
+            document.getElementById('dictResultSource').innerHTML = srcLabel;
+            document.getElementById('dictResult').style.display = 'block';
+            document.getElementById('dictLoading').style.display = 'none';
+        }
+
+        function hideDictResult() {
+            document.getElementById('dictResult').style.display = 'none';
+        }
+
+        function showDictLoading() {
+            document.getElementById('dictLoading').style.display = 'block';
+            document.getElementById('dictResult').style.display = 'none';
+        }
+
+        function hideDictLoading() {
+            document.getElementById('dictLoading').style.display = 'none';
+        }
+
+        function injectLookupToTranscript(term, translation) {
+            // Only annotate in transcript while recording
+            if (!isRecording) return;
+            const annotation = {
+                text: `[User looked up: "${term}" → "${translation}"]`,
+                translation: '',
+                timestamp: new Date().toISOString(),
+                detected_language: 'annotation',
+                speaker_role: 'annotation',
+                speaker_name: '',
+            };
+            instantTranscripts.push(annotation);
+
+            const container = document.getElementById('transcriptContent');
+            const el = document.createElement('div');
+            el.className = 'segment dict-annotation';
+            el.innerHTML = `<div class="segment-text annotation-text">&#128216; Looked up: <strong>${escapeHtml(term)}</strong> → ${escapeHtml(translation)}</div>`;
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+
+            // Update handle bar label
+            document.getElementById('dictLastWord').textContent = `${escapeHtml(term)} → ${escapeHtml(translation)}`;
+        }
+
+        // TTS button
+        document.getElementById('dictTtsBtn').addEventListener('click', async () => {
+            const text = document.getElementById('dictResultText').textContent;
+            if (!text) return;
+            const langs = getDictLanguages();
+            const dir = langs[dictCurrentDirection];
+            try {
+                const res = await fetch(`${API_BASE}/tts/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, target_lang: dir.to }),
+                });
+                const data = await res.json();
+                if (data.audio_url) new Audio(data.audio_url).play();
+            } catch (err) {
+                console.error('TTS error:', err);
+            }
+        });
+
+        // Show mode
+        document.getElementById('dictShowBtn').addEventListener('click', () => {
+            const text = document.getElementById('dictResultText').textContent;
+            document.getElementById('dictShowText').textContent = text;
+            document.getElementById('dictShowOverlay').style.display = 'flex';
+        });
+        document.getElementById('dictShowClose').addEventListener('click', () => {
+            document.getElementById('dictShowOverlay').style.display = 'none';
+        });
+
+        // Close sheet when tapping outside
+        document.addEventListener('click', (e) => {
+            const sheet = document.getElementById('dictSheet');
+            const handleBar = document.getElementById('dictHandleBar');
+            if (dictOpen && !sheet.contains(e.target) && !handleBar.contains(e.target)) {
+                dictOpen = false;
+                sheet.classList.remove('open');
             }
         });
     </script>

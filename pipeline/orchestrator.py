@@ -250,6 +250,7 @@ class MedJourneePipeline:
         provider_translate_to: str = "vi",
         family_spoken: str = "vi",
         family_translate_to: str = "en",
+        precomputed_diarization: Optional[DiarizationResult] = None,
     ) -> PipelineState:
         """
         Process audio through the full pipeline.
@@ -310,23 +311,48 @@ class MedJourneePipeline:
 
             # =================================================================
             # STAGE 1: DIARIZATION
+            # Gladia captures speaker-diarized segments in real-time during recording.
+            # When precomputed_diarization is provided (Gladia path), AssemblyAI is
+            # skipped entirely. The legacy AssemblyAI path is preserved as fallback
+            # for any caller that does not supply precomputed data.
             # =================================================================
             state.start_stage(PipelineStage.DIARIZATION.value)
-            if logger:
-                logger.stage_start("diarization")
+
+            if precomputed_diarization is not None:
+                # ── Gladia path: use already-captured segments ──────────────
+                state.diarization = precomputed_diarization
+                diarization_duration = 0.0
+                print(f"[Pipeline] Stage 1: Diarization (Gladia pre-computed, "
+                      f"{len(precomputed_diarization.segments)} segments, AssemblyAI skipped)")
             else:
-                print(f"[Pipeline] Stage 1: Diarization")
+                # ── Legacy AssemblyAI path ───────────────────────────────────
+                if logger:
+                    logger.stage_start("diarization")
+                else:
+                    print(f"[Pipeline] Stage 1: Diarization (AssemblyAI)")
 
-            diarization_start = time.time()
-            state.diarization = await self._execute_with_retry(
-                func=lambda: self.diarization_agent.diarize(audio_file, family_id),
-                stage="diarization",
-                state=state,
-                logger=logger
-            )
-            diarization_duration = (time.time() - diarization_start) * 1000
+                diarization_start = time.time()
+                state.diarization = await self._execute_with_retry(
+                    func=lambda: self.diarization_agent.diarize(audio_file, family_id),
+                    stage="diarization",
+                    state=state,
+                    logger=logger
+                )
+                diarization_duration = (time.time() - diarization_start) * 1000
 
-            # Quality gate
+                # Record AssemblyAI diarization cost
+                if self.enable_cost_tracking and self.cost_tracker and state.diarization and state.diarization.total_duration > 0:
+                    try:
+                        await self.cost_tracker.record_assemblyai_call(
+                            state.session_id,
+                            audio_minutes=state.diarization.total_duration / 60.0,
+                            with_diarization=True,
+                            user_id=state.user_id
+                        )
+                    except Exception as e:
+                        print(f"[CostTracker] AssemblyAI record failed (non-fatal): {e}")
+
+            # Quality gate (runs for both paths)
             diarization_validation = self.validator.validate_diarization(state.diarization)
             state.record_validation(PipelineStage.DIARIZATION.value, diarization_validation)
             state.complete_stage(PipelineStage.DIARIZATION.value, diarization_validation.score)
@@ -338,18 +364,6 @@ class MedJourneePipeline:
                                      segments=len(state.diarization.segments) if state.diarization else 0)
             else:
                 print(f"[Pipeline] Diarization: {len(state.diarization.segments) if state.diarization else 0} segments, quality={diarization_validation.score:.2f}")
-
-            # Record AssemblyAI diarization cost
-            if self.enable_cost_tracking and self.cost_tracker and state.diarization and state.diarization.total_duration > 0:
-                try:
-                    await self.cost_tracker.record_assemblyai_call(
-                        state.session_id,
-                        audio_minutes=state.diarization.total_duration / 60.0,
-                        with_diarization=True,
-                        user_id=state.user_id
-                    )
-                except Exception as e:
-                    print(f"[CostTracker] AssemblyAI record failed (non-fatal): {e}")
 
             if diarization_validation.status == ValidationStatus.FAILED:
                 state.add_error("diarization", f"Quality gate failed: {diarization_validation.issues}")
@@ -751,6 +765,8 @@ class MedJourneePipeline:
         provider_translate_to: str = "vi",
         family_spoken: str = "vi",
         family_translate_to: str = "en",
+        provider_spoken_2: str = "",
+        family_spoken_2: str = "",
         family_id: str = "",
         session_id: str = "",
         user_id: str = ""
@@ -766,8 +782,14 @@ class MedJourneePipeline:
             # Save audio position for potential voice identification
             await audio_file.seek(0)
 
+            # Build language list for multi-language / code-switching support.
+            # Deduplicate and strip empties; if only one unique language remains,
+            # Whisper will be forced to it (best accuracy). 2+ → auto-detect.
+            all_spoken = [provider_spoken, family_spoken, provider_spoken_2, family_spoken_2]
+            languages = list({l for l in all_spoken if l and l not in ("auto", "")})
+
             # Quick transcription
-            transcription = await self.transcription_agent.transcribe(audio_file)
+            transcription = await self.transcription_agent.transcribe(audio_file, languages=languages)
 
             if not transcription.success or not transcription.text:
                 return InstantTranscribeResponse(
@@ -787,35 +809,18 @@ class MedJourneePipeline:
                 except Exception as e:
                     print(f"[CostTracker] Whisper record failed (non-fatal): {e}")
 
-            # Determine translation target based on detected language only
-            # (we never assume role from language — multiple people may be in the room)
+            # Use detected language to assign speaker role and translation direction.
+            # Real-time voice enrollment matching is not performed here — it is too
+            # unreliable on 2-3 second clips and adds a Supabase round-trip per chunk.
+            # Correct speaker names are assigned by AssemblyAI diarization in finalize-session.
             detected = transcription.detected_language.lower() if transcription.detected_language else "unknown"
 
             if detected.startswith(family_spoken[:2]):
                 target = family_translate_to
+                speaker_role = SpeakerRole.PATIENT_FAMILY  # family language → green
             else:
                 target = provider_translate_to
-
-            # All unidentified speakers are UNKNOWN until enrollment matching names them
-            speaker_role = SpeakerRole.UNKNOWN
-
-            # Try to identify enrolled speaker if family_id provided
-            speaker_name = ""
-            enrollment_confidence = 0.0
-            if family_id:
-                try:
-                    from services.voice_enrollment_service import voice_enrollment_service
-                    await audio_file.seek(0)
-                    matched_name, confidence = await voice_enrollment_service.identify_enrolled_speaker(
-                        audio_file, family_id
-                    )
-                    if matched_name and confidence >= 0.60:
-                        speaker_name = matched_name
-                        enrollment_confidence = confidence
-                        speaker_role = SpeakerRole.PATIENT_FAMILY
-                        print(f"[InstantTranscribe] Matched enrolled speaker: {matched_name} ({confidence:.2f})")
-                except Exception as e:
-                    print(f"Speaker identification error (non-fatal): {e}")
+                speaker_role = SpeakerRole.HEALTHCARE_PROVIDER  # provider language (or unknown) → blue
 
             # Quick translation
             translation = await self.translation_agent.translate(
@@ -831,8 +836,6 @@ class MedJourneePipeline:
                 translation=translation.translated_text if translation.success else "",
                 detected_language=transcription.detected_language,
                 speaker_role=speaker_role,
-                speaker_name=speaker_name,
-                enrollment_confidence=enrollment_confidence,
                 confidence=transcription.confidence
             )
 
@@ -873,8 +876,27 @@ async def instant_transcribe(
     audio_file,
     session_id: str = "",
     user_id: str = "",
+    provider_spoken: str = "en",
+    provider_translate_to: str = "vi",
+    family_spoken: str = "vi",
+    family_translate_to: str = "en",
+    provider_spoken_2: str = "",
+    family_spoken_2: str = "",
+    family_id: str = "",
     **kwargs
 ) -> InstantTranscribeResponse:
     """Convenience function for instant transcription"""
     pipeline = get_pipeline()
-    return await pipeline.instant_transcribe(audio_file, session_id=session_id, user_id=user_id, **kwargs)
+    return await pipeline.instant_transcribe(
+        audio_file,
+        provider_spoken=provider_spoken,
+        provider_translate_to=provider_translate_to,
+        family_spoken=family_spoken,
+        family_translate_to=family_translate_to,
+        provider_spoken_2=provider_spoken_2,
+        family_spoken_2=family_spoken_2,
+        family_id=family_id,
+        session_id=session_id,
+        user_id=user_id,
+        **kwargs,
+    )

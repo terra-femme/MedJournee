@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1f3c">
+    <title>MedJournee — Medical Dictionary</title>
+    <link rel="stylesheet" href="/static/css/neuglass.css">
+    <style>
+        .dict-page {
+            padding: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .dict-lang-picker {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .dict-lang-picker select {
+            flex: 1;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .dict-swap-btn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .dict-swap-btn:hover { background: rgba(255,255,255,0.15); }
+
+        .dict-input-wrap {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .dict-input {
+            width: 100%;
+            padding: 14px 44px 14px 16px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border: none;
+            border-radius: 14px;
+            font-size: 18px;
+            box-sizing: border-box;
+        }
+        .dict-input:focus { outline: 2px solid var(--sunset-orange); }
+        .dict-clear-btn {
+            position: absolute; right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            color: #999; font-size: 18px; cursor: pointer;
+            display: none;
+        }
+
+        .dict-result-card {
+            background: var(--glass-medium);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            animation: segmentIn 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        @keyframes segmentIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .dict-term-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .dict-original {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .dict-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin-bottom: 12px;
+        }
+        .dict-translated {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        .dict-source-badge {
+            display: inline-block;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.06);
+            border-radius: 6px;
+            padding: 3px 8px;
+            margin-bottom: 16px;
+        }
+
+        .dict-actions {
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .dict-action-btn {
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .dict-action-btn:hover { background: rgba(255,255,255,0.15); }
+
+        .dict-loading {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 24px;
+            font-size: 15px;
+        }
+        .dict-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px 20px;
+        }
+        .dict-placeholder-icon { font-size: 48px; margin-bottom: 12px; }
+        .dict-placeholder-text { font-size: 14px; line-height: 1.5; }
+
+        /* Full-screen show mode */
+        .dict-show-overlay {
+            position: fixed; inset: 0;
+            background: var(--sunset-deep, #1a1f3c);
+            z-index: 300;
+            display: none;
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 32px;
+        }
+        .dict-show-overlay.visible { display: flex; }
+        .dict-show-text {
+            font-size: clamp(2.5rem, 12vw, 6rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 32px;
+        }
+        .dict-show-close {
+            padding: 14px 32px;
+            border-radius: var(--radius-full);
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='/'">Back</button>
+        <div class="header-title">Medical Dictionary</div>
+    </div>
+
+    <div class="dict-page">
+        <!-- Language pair -->
+        <div class="dict-lang-picker">
+            <select id="dictFrom" onchange="saveLangs(); relookup()">
+                <option value="en">English</option>
+                <option value="vi">Vietnamese</option>
+                <option value="es">Spanish</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="zh-TW">Chinese (Traditional)</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="th">Thai</option>
+                <option value="tl">Tagalog</option>
+            </select>
+            <button class="dict-swap-btn" onclick="swapLanguages()" title="Swap languages">&#8644;</button>
+            <select id="dictTo" onchange="saveLangs(); relookup()">
+                <option value="vi" selected>Vietnamese</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="zh-TW">Chinese (Traditional)</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="th">Thai</option>
+                <option value="tl">Tagalog</option>
+            </select>
+        </div>
+
+        <!-- Search input -->
+        <div class="dict-input-wrap">
+            <input type="text" id="dictInput" class="dict-input"
+                placeholder="Type a medical word or abbreviation..."
+                autocomplete="off" autocorrect="off" spellcheck="false" />
+            <button class="dict-clear-btn" id="dictClearBtn" onclick="clearInput()">&#10005;</button>
+        </div>
+
+        <!-- Result / loading / placeholder -->
+        <div id="dictPlaceholder" class="dict-placeholder">
+            <div class="dict-placeholder-icon">&#128216;</div>
+            <div class="dict-placeholder-text">
+                Type a medical term to look it up.<br>
+                Includes local abbreviations for Vietnamese, Spanish, and Chinese.
+            </div>
+        </div>
+        <div id="dictLoading" class="dict-loading" style="display:none">Translating...</div>
+        <div id="dictResultCard" class="dict-result-card" style="display:none">
+            <div class="dict-term-label">Original</div>
+            <div class="dict-original" id="dictOriginal"></div>
+            <div class="dict-divider"></div>
+            <div class="dict-translated" id="dictTranslated"></div>
+            <div class="dict-source-badge" id="dictSourceBadge"></div>
+            <div class="dict-actions">
+                <button class="dict-action-btn" id="dictTtsBtn">&#128266; Hear it</button>
+                <button class="dict-action-btn" id="dictShowBtn">&#128241; Show</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full-screen show mode -->
+    <div class="dict-show-overlay" id="dictShowOverlay">
+        <div class="dict-show-text" id="dictShowText"></div>
+        <button class="dict-show-close" onclick="closeShow()">Tap to close</button>
+    </div>
+
+    <script src="/static/js/config.js"></script>
+    <script>
+        // ── Language persistence ──────────────────────────────────────────
+        function loadLangs() {
+            const profile = JSON.parse(localStorage.getItem('medjournee_profile') || '{}');
+            // Fallback: try to read from recording page settings
+            const fromLs = localStorage.getItem('dict_from') || profile.family_spoken || 'en';
+            const toLs   = localStorage.getItem('dict_to')   || profile.provider_spoken || 'vi';
+            document.getElementById('dictFrom').value = fromLs;
+            document.getElementById('dictTo').value   = toLs;
+        }
+
+        function saveLangs() {
+            localStorage.setItem('dict_from', document.getElementById('dictFrom').value);
+            localStorage.setItem('dict_to',   document.getElementById('dictTo').value);
+        }
+
+        function swapLanguages() {
+            const from = document.getElementById('dictFrom');
+            const to   = document.getElementById('dictTo');
+            [from.value, to.value] = [to.value, from.value];
+            saveLangs();
+            relookup();
+        }
+
+        // ── Input handling ────────────────────────────────────────────────
+        let debounceTimer = null;
+
+        document.getElementById('dictInput').addEventListener('input', (e) => {
+            const term = e.target.value.trim();
+            document.getElementById('dictClearBtn').style.display = term ? 'block' : 'none';
+            clearTimeout(debounceTimer);
+            if (!term) { showPlaceholder(); return; }
+            debounceTimer = setTimeout(() => lookupTerm(term), 400);
+        });
+
+        function clearInput() {
+            document.getElementById('dictInput').value = '';
+            document.getElementById('dictClearBtn').style.display = 'none';
+            showPlaceholder();
+        }
+
+        function relookup() {
+            const term = document.getElementById('dictInput').value.trim();
+            if (term) lookupTerm(term);
+        }
+
+        // ── Lookup ────────────────────────────────────────────────────────
+        async function lookupTerm(term) {
+            showLoading();
+            try {
+                const from = document.getElementById('dictFrom').value;
+                const to   = document.getElementById('dictTo').value;
+                const body = new FormData();
+                body.append('term',        term);
+                body.append('target_lang', to);
+                body.append('source_lang', from);
+
+                const res  = await fetch(`${API_BASE}/translate/medical-term/`, { method: 'POST', body });
+                const data = await res.json();
+
+                if (data.success && data.translated_text) {
+                    showResult(term, data);
+                } else {
+                    showPlaceholder();
+                }
+            } catch (err) {
+                console.error('Dictionary error:', err);
+                showPlaceholder();
+            }
+        }
+
+        // ── Display helpers ───────────────────────────────────────────────
+        function showPlaceholder() {
+            document.getElementById('dictPlaceholder').style.display  = 'block';
+            document.getElementById('dictLoading').style.display      = 'none';
+            document.getElementById('dictResultCard').style.display   = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('dictPlaceholder').style.display  = 'none';
+            document.getElementById('dictLoading').style.display      = 'block';
+            document.getElementById('dictResultCard').style.display   = 'none';
+        }
+
+        function showResult(term, data) {
+            document.getElementById('dictOriginal').textContent    = term;
+            document.getElementById('dictTranslated').textContent  = data.translated_text;
+            const badge = data.source === 'local_dict'
+                ? '📚 Local medical dictionary'
+                : '🌐 Google Translate (medical context)';
+            document.getElementById('dictSourceBadge').textContent = badge;
+
+            document.getElementById('dictPlaceholder').style.display  = 'none';
+            document.getElementById('dictLoading').style.display      = 'none';
+            document.getElementById('dictResultCard').style.display   = 'block';
+        }
+
+        // ── TTS ───────────────────────────────────────────────────────────
+        document.getElementById('dictTtsBtn').addEventListener('click', async () => {
+            const text = document.getElementById('dictTranslated').textContent;
+            if (!text) return;
+            const to = document.getElementById('dictTo').value;
+            try {
+                const res = await fetch(`${API_BASE}/tts/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, target_lang: to }),
+                });
+                const data = await res.json();
+                if (data.audio_url) new Audio(data.audio_url).play();
+            } catch (err) {
+                console.error('TTS error:', err);
+            }
+        });
+
+        // ── Show mode ─────────────────────────────────────────────────────
+        document.getElementById('dictShowBtn').addEventListener('click', () => {
+            document.getElementById('dictShowText').textContent = document.getElementById('dictTranslated').textContent;
+            document.getElementById('dictShowOverlay').classList.add('visible');
+        });
+
+        function closeShow() {
+            document.getElementById('dictShowOverlay').classList.remove('visible');
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLangs();
+            document.getElementById('dictInput').focus();
+        });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</body>
+</html>

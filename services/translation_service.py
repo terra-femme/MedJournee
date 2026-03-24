@@ -295,7 +295,9 @@ async def translate_medical_term(
     # Step 1: local abbreviation lookup
     abbrev_match = _check_abbreviation_dict(term.strip(), source_lang, target_lang)
     if abbrev_match:
-        logger.info(f"Medical abbrev hit: '{term}' → '{abbrev_match}' (target={target_lang})")
+        safe_term = term.replace('\n', '').replace('\r', '')[:100]
+        safe_target = target_lang.replace('\n', '').replace('\r', '')[:10]
+        logger.info("Medical abbrev hit: '%s' (target=%s)", safe_term, safe_target)
         return {
             "translated_text": abbrev_match,
             "source_language": source_lang,
