@@ -41,7 +41,7 @@ class SummarizationAgent:
 
     Usage:
         agent = SummarizationAgent()
-        result = await agent.summarize(translated_segments, patient_name="Grandma")
+        result = await agent.summarize(translated_segments, patient_name="Jane")
 
         if result.success:
             journal = result.journal_entry

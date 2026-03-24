@@ -14,10 +14,7 @@ Features:
 - Graceful error handling
 """
 
-import openai
 import os
-import tempfile
-import subprocess
 import re
 import time
 from typing import Optional
@@ -155,19 +152,26 @@ class TranscriptionAgent:
         "audio/m4a": "m4a",
     }
 
-    def __init__(self, api_key: Optional[str] = None, test_mode: bool = False):
+    def __init__(self, api_key: Optional[str] = None, test_mode: bool = False, provider=None):
         """
-        Initialize with OpenAI API key.
+        Initialize with OpenAI API key and optional transcription provider.
 
         Args:
             api_key: OpenAI API key (uses env var if not provided)
             test_mode: If True, collects detailed logs for testing/debugging
+            provider: TranscriptionProvider instance. Defaults to WhisperProvider.
+                      Swap for GPT4oProvider or GeminiProvider when ready.
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY not found in environment")
 
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # Wire in provider — default to Whisper
+        from services.transcription_provider import WhisperProvider, TranscriptionProvider
+        if provider is None:
+            self.provider = WhisperProvider(api_key=self.api_key)
+        else:
+            self.provider = provider
 
         # Combine all hallucination phrases
         self.all_hallucinations = (
@@ -198,9 +202,15 @@ class TranscriptionAgent:
         """Get test log entries"""
         return self.test_log
 
-    async def transcribe(self, audio_file) -> TranscriptionResult:
+    async def transcribe(self, audio_file, languages: list[str] = None) -> TranscriptionResult:
         """
         Transcribe audio file to text with language detection.
+
+        Args:
+            audio_file: UploadFile-like object.
+            languages:  Expected language codes (see TranscriptionProvider docstring).
+                        - 1 language → forced decoding (best for monolingual sessions)
+                        - 0 or 2+ languages → auto-detect (handles code-switching)
 
         CRITICAL: Filters hallucinations in multiple languages.
         """
@@ -208,104 +218,70 @@ class TranscriptionAgent:
         self._log_test("transcribe_start", {"timestamp": start_time})
 
         try:
-            await audio_file.seek(0)
-            audio_content = await audio_file.read()
-            await audio_file.seek(0)
+            # --- Delegate raw API call to the provider ---
+            provider_result = await self.provider.transcribe(audio_file, languages)
 
-            self._log_test("audio_loaded", {
-                "size_bytes": len(audio_content),
-                "content_type": getattr(audio_file, 'content_type', 'unknown')
-            })
+            if not provider_result["success"]:
+                return TranscriptionResult(
+                    success=False,
+                    text="",
+                    error=provider_result.get("error", "Provider transcription failed"),
+                    processing_time_ms=(time.time() - start_time) * 1000,
+                )
 
-            # Skip very short audio (likely no speech or too short for reliable transcription)
-            # Increased threshold from 5000 to 10000 bytes to reduce hallucinations
-            if len(audio_content) < 10000:
-                self._log_test("audio_too_short", {"size_bytes": len(audio_content), "threshold": 10000})
+            # Provider returns "" for too-small audio chunks
+            if provider_result.get("_skipped"):
+                self._log_test("audio_too_short", {})
                 return TranscriptionResult(
                     success=True,
                     text="",
                     detected_language="unknown",
                     confidence=0.0,
                     duration_seconds=0.0,
-                    processing_time_ms=(time.time() - start_time) * 1000
+                    processing_time_ms=(time.time() - start_time) * 1000,
                 )
 
-            # Determine file extension
-            content_type = getattr(audio_file, 'content_type', 'audio/webm') or 'audio/webm'
-            base_content_type = content_type.split(";")[0].strip()
-            input_ext = self.CONTENT_TYPE_MAP.get(base_content_type, "webm")
-
-            # Try direct upload first (Whisper supports webm, mp4, wav, etc. natively)
-            # FFmpeg conversion was causing issues
-            print(f"[Audio] Sending direct: {len(audio_content)} bytes, type={base_content_type}, ext={input_ext}")
-            file_tuple = (f"audio.{input_ext}", audio_content, base_content_type)
-
-            # Use verbose_json to get detected language and segment info
-            # temperature=0 disables Whisper's probabilistic sampling — prevents it from
-            # "completing" conversational gaps with hallucinated responses (e.g. adding
-            # "Are you okay?" during a pause after "Hello, how are you?").
-            # initial_prompt gives medical domain context without echoing back — keep it
-            # short (< 10 words) to avoid the known prompt-echo issue.
-            api_params = {
-                "model": "whisper-1",
-                "file": file_tuple,
-                "response_format": "verbose_json",
-                "temperature": 0,
-                "prompt": "Medical appointment. Patient and doctor.",
-            }
-
-            response = self.client.audio.transcriptions.create(**api_params)
-
-            raw_text = response.text.strip() if response.text else ""
-            detected_language = getattr(response, "language", None) or "unknown"
-
-            # DEBUG: Log what Whisper returned
-            print(f"[Whisper Raw] Language: {detected_language}, Text: '{raw_text[:100]}...' ({len(raw_text)} chars)")
+            raw_text = provider_result["text"]
+            detected_language = provider_result["language"]
+            segments = provider_result["segments"]  # list of {"text", "no_speech_prob"}
 
             self._log_test("whisper_response", {
                 "raw_text": raw_text,
                 "detected_language": detected_language,
-                "text_length": len(raw_text)
+                "text_length": len(raw_text),
             })
 
-            # Check no_speech_prob from segments (if available)
-            segments = getattr(response, "segments", [])
+            # DEBUG log
+            print(f"[Whisper Raw] Language: {detected_language}, Text: '{raw_text[:100]}...' ({len(raw_text)} chars)")
+
+            # Check no_speech_prob from segments
             segment_data = []
             if segments:
-                # DEBUG: Show segment details
-                for i, seg in enumerate(segments[:3]):  # First 3 segments
-                    seg_text = getattr(seg, "text", seg.get("text", "") if isinstance(seg, dict) else "")
-                    no_speech = getattr(seg, "no_speech_prob", seg.get("no_speech_prob", 0) if isinstance(seg, dict) else 0)
+                for i, seg in enumerate(segments[:3]):
+                    no_speech = seg.get("no_speech_prob", 0)
+                    seg_text = seg.get("text", "")
                     print(f"[Whisper Seg {i}] no_speech={no_speech:.2f}, text='{seg_text[:50]}'")
                     segment_data.append({"index": i, "no_speech_prob": no_speech, "text": seg_text[:100]})
 
-                self._log_test("whisper_segments", {
-                    "segment_count": len(segments),
-                    "segments": segment_data
-                })
-            if segments and len(segments) > 0:
-                # Filter out segments with high no_speech probability (likely hallucinations)
-                valid_segments = []
-                for seg in segments:
-                    no_speech_prob = getattr(seg, "no_speech_prob", seg.get("no_speech_prob", 0) if isinstance(seg, dict) else 0)
-                    if no_speech_prob < 0.5:  # Keep segments with <50% no-speech probability
-                        seg_text = getattr(seg, "text", seg.get("text", "") if isinstance(seg, dict) else "")
-                        valid_segments.append(seg_text)
+                self._log_test("whisper_segments", {"segment_count": len(segments), "segments": segment_data})
 
+            if segments:
+                valid_segments = [
+                    seg["text"] for seg in segments if seg.get("no_speech_prob", 0) < 0.5
+                ]
                 if valid_segments:
                     raw_text = " ".join(valid_segments).strip()
                 elif raw_text:
-                    # All segments had high no_speech_prob - likely all hallucinations
                     print(f"[Transcription] All segments had high no_speech_prob, returning empty")
                     return TranscriptionResult(
                         success=True,
                         text="",
                         detected_language=detected_language,
                         confidence=0.0,
-                        duration_seconds=len(audio_content) / 32000,
+                        duration_seconds=0.0,
                         was_filtered=True,
                         filter_reason="High no_speech_prob in all segments",
-                        processing_time_ms=(time.time() - start_time) * 1000
+                        processing_time_ms=(time.time() - start_time) * 1000,
                     )
 
             # CRITICAL: Multi-language hallucination filtering
@@ -318,7 +294,7 @@ class TranscriptionAgent:
                 "filter_reason": filter_reason
             })
 
-            confidence = self._estimate_confidence(raw_text, cleaned_text, len(audio_content))
+            confidence = self._estimate_confidence(raw_text, cleaned_text, provider_result.get("audio_size", 0))
 
             self._log_test("transcribe_complete", {
                 "final_text": cleaned_text,
@@ -331,29 +307,19 @@ class TranscriptionAgent:
                 text=cleaned_text,
                 detected_language=detected_language,
                 confidence=confidence,
-                duration_seconds=len(audio_content) / 32000,
+                duration_seconds=provider_result.get("audio_size", 0) / 32000,
                 was_filtered=was_filtered,
                 filter_reason=filter_reason,
                 processing_time_ms=(time.time() - start_time) * 1000
             )
 
-        except openai.APIError as e:
-            return TranscriptionResult(
-                success=False,
-                text="",
-                error=f"OpenAI API error: {str(e)}",
-                processing_time_ms=(time.time() - start_time) * 1000
-            )
         except Exception as e:
             return TranscriptionResult(
                 success=False,
                 text="",
                 error=f"Transcription failed: {str(e)}",
-                processing_time_ms=(time.time() - start_time) * 1000
+                processing_time_ms=(time.time() - start_time) * 1000,
             )
-        finally:
-            # No temp files to clean up (direct upload)
-            pass
 
     def _filter_hallucinations(self, text: str, detected_language: str = "unknown") -> tuple:
         """
@@ -473,9 +439,10 @@ class TranscriptionAgent:
                 print(f"[Hallucination Filter] Exact match blocked: '{text}'")
                 return "", True, f"Exact match: '{phrase}'"
 
-            # Starts with hallucination phrase - only if text is very short
-            # (longer text starting with "thank you" might be legitimate like "Thank you for explaining...")
-            if len(text) < 40:
+            # Starts with hallucination phrase - only multi-word phrases, only if text is very short.
+            # Single-word entries (hello, hi, hey) must only block on exact match — not when they
+            # open a real sentence like "Hello, how are you?" or "Hi, I'm Dr. Smith."
+            if len(text) < 40 and len(phrase_lower.split()) >= 2:
                 if text_lower.startswith(phrase_lower + ".") or text_lower.startswith(phrase_lower + ","):
                     print(f"[Hallucination Filter] Short starts-with blocked: '{text}'")
                     return "", True, f"Short starts with: '{phrase}'"
@@ -706,11 +673,12 @@ async def transcribe_audio(file, source_language: Optional[str] = None) -> dict:
     Backward-compatible function.
     """
     agent = get_agent()
-    result = await agent.transcribe(file)
+    languages = [source_language] if source_language and source_language not in ("auto", "") else []
+    result = await agent.transcribe(file, languages=languages if languages else None)
 
     return {
         "text": result.text,
         "language": result.detected_language,
         "success": result.success,
-        "error": result.error
+        "error": result.error,
     }

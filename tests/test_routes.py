@@ -43,9 +43,10 @@ def client():
         'SUPABASE_URL': 'https://test.supabase.co',
         'SUPABASE_KEY': 'test-key',  # pragma: allowlist secret
         'SUPABASE_SERVICE_KEY': 'test-service-key',  # pragma: allowlist secret
+        'SUPABASE_JWT_SECRET': 'test-supabase-jwt-secret-for-testing-only',  # pragma: allowlist secret
         'OPENAI_API_KEY': 'test-openai-key',  # pragma: allowlist secret
         'ASSEMBLYAI_API_KEY': 'test-assemblyai-key',  # pragma: allowlist secret
-        'JWT_SECRET_KEY': 'test-jwt-secret',  # pragma: allowlist secret
+        'METRICS_API_KEY': 'test-metrics-key',  # pragma: allowlist secret
         'ENVIRONMENT': 'testing'
     }):
         # Mock the database client creation
@@ -104,18 +105,16 @@ class TestSecurityHeaders:
 class TestCostsRoutes:
     """Test /costs endpoints"""
 
-    def test_get_session_costs_endpoint_exists(self, client):
-        """Test that the session costs endpoint exists"""
-        # This will return an error since we don't have real data,
-        # but it should not be a 404 (endpoint exists)
-        response = client.get("/costs/session/test-session-123")
-        # Should be 200, 404 (not found), or 500 (server error) - NOT 404 for route not found
-        assert response.status_code != 404
+    def test_get_cost_summary_endpoint_exists(self, client):
+        """Test that the cost summary endpoint exists (requires auth — 403 without token)"""
+        response = client.get("/costs/summary/test-user")
+        # 403 = auth required (route exists); 404 = route not found
+        assert response.status_code == 403
 
-    def test_get_user_costs_endpoint_exists(self, client):
-        """Test that the user costs endpoint exists"""
-        response = client.get("/costs/user/test-user")
-        assert response.status_code != 404
+    def test_get_cost_history_endpoint_exists(self, client):
+        """Test that the cost history endpoint exists (requires auth — 403 without token)"""
+        response = client.get("/costs/history/test-user")
+        assert response.status_code == 403
 
 
 class TestAppointmentsRoutes:
@@ -134,10 +133,9 @@ class TestAppointmentsRoutes:
         assert response.status_code != 404
 
     def test_create_appointment_endpoint_exists(self, client):
-        """Test that create appointment endpoint exists"""
+        """Test that create appointment endpoint exists (requires auth — 403 without token)"""
         response = client.post("/appointments/create", json={})
-        # Should get validation error (422), not route not found
-        assert response.status_code in [422, 200, 500]
+        assert response.status_code == 403
 
     def test_get_monthly_appointments_endpoint_exists(self, client):
         """Test that monthly appointments endpoint exists"""
@@ -154,10 +152,9 @@ class TestTalkingPointsRoutes:
         assert response.status_code != 404
 
     def test_create_talking_point_endpoint_exists(self, client):
-        """Test that create talking point endpoint exists"""
+        """Test that create talking point endpoint exists (requires auth — 403 without token)"""
         response = client.post("/talking-points/create", json={})
-        # Should get validation error (422), not route not found
-        assert response.status_code in [422, 200, 500]
+        assert response.status_code == 403
 
     def test_toggle_talking_point_endpoint_exists(self, client):
         """Test that toggle talking point endpoint exists"""

@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-03-04T18:27:40.338060",
+  "timestamp": "2026-03-04T18:27:24.369767",
   "total_tests": 1,
   "passed_tests": 1,
   "failed_tests": 0,
   "overall_score": 1.0,
-  "duration_ms": 5958.960771560669,
+  "duration_ms": 4532.365560531616,
   "results": [
     {
       "fixture_name": "english_medical_sample",
@@ -37,7 +37,7 @@
       "hallucinations_detected": [],
       "speaker_count": 0,
       "segments": [],
-      "processing_time_ms": 5956.960916519165,
+      "processing_time_ms": 4531.365394592285,
       "errors": [],
       "warnings": []
     }

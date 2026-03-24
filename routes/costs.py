@@ -1,14 +1,15 @@
 # routes/costs.py
 """Cost tracking API routes — query API usage and costs per user."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 import os
 import logging
 from supabase import create_client
 from dotenv import load_dotenv
+from middleware.auth import require_auth
 
 load_dotenv()
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_auth)])
 logger = logging.getLogger(__name__)
 
 
@@ -77,11 +78,13 @@ async def get_cost_summary(user_id: str):
             "by_provider": by_provider,
             "by_operation": by_operation,
             "pricing": {
-                "openai_whisper_per_minute": 0.006,
+                "gladia_live_per_hour": 0.75,
+                "gladia_live_per_minute": 0.0125,
                 "openai_gpt4_input_per_1k_tokens": 0.03,
                 "openai_gpt4_output_per_1k_tokens": 0.06,
+                "google_translate": 0.0,
                 "assemblyai_diarization_per_minute": 0.12,
-                "google_translate": 0.0
+                "_assemblyai_note": "AssemblyAI replaced by Gladia for diarization; entry kept for historical cost records"
             }
         }
     except Exception as e:

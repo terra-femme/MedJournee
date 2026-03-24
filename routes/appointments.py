@@ -4,12 +4,13 @@ API endpoints for appointment management.
 Handles CRUD operations and linking to journal entries.
 """
 
-from fastapi import APIRouter, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form
 from typing import Optional
+from middleware.auth import require_auth
 from services.appointments_service import AppointmentsService
 from services.database_service import database_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_auth)])
 
 # Initialize service with the database client
 appointments_service = AppointmentsService(database_service.supabase)
