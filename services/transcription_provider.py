@@ -243,7 +243,7 @@ class WhisperProvider(TranscriptionProvider):
                     try:
                         os.unlink(tf.name)
                     except OSError:
-                        pass
+                        pass  # Temp file already deleted or inaccessible — non-critical, ignore
 
 
 class GPT4oProvider(TranscriptionProvider):
