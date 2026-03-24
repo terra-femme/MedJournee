@@ -99,6 +99,4 @@ tests/           Test suite
 
 ## Deployment
 
-The app runs as a single Render web service — FastAPI serves both the API and the PWA frontend. See `pwa_docs/RENDER_DEPLOYMENT.md` for full deployment instructions.
-
-Environment variables are managed through Render's dashboard. The `.env` file is never committed.
+The app runs as a single Render web service — FastAPI serves both the API and the PWA frontend.
